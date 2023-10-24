@@ -51,6 +51,8 @@ public:
 
 	static Mesh* GenerateTriangle();
 
+	static Mesh* GenerateSquare();
+
 	void Draw();
 	void DrawSubMesh(int i);
 
