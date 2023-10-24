@@ -40,7 +40,7 @@ enum MeshBuffer {
 };
 
 class Mesh	{
-public:	
+public:
 	struct SubMesh {
 		int start;
 		int count;
@@ -48,6 +48,8 @@ public:
 
 	Mesh(void);
 	~Mesh(void);
+
+	static Mesh* GenerateTriangle();
 
 	void Draw();
 	void DrawSubMesh(int i);
