@@ -9,7 +9,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Graphics Coursework", "Grap
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tutorial 01 - Your First Triangle", "1) Your First Triangle\Tutorial1.vcxproj", "{061C02AD-EAAA-4BB1-9D23-1B1E55D0E924}"
 	ProjectSection(ProjectDependencies) = postProject
-		{15681E3C-A747-42F0-B091-5F1300F14F52} = {15681E3C-A747-42F0-B091-5F1300F14F52}
 		{98D6B51B-CB0A-4389-ADC6-24082B967C3F} = {98D6B51B-CB0A-4389-ADC6-24082B967C3F}
 	EndProjectSection
 EndProject
