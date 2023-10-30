@@ -1,6 +1,8 @@
 #include "Renderer.h"
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
+	camera = new Camera();
+
 	triangle = Mesh::GenerateTriangle();
 
 	matrixShader = new Shader("MatrixVertex.glsl", "colourFragment.glsl");
@@ -43,6 +45,11 @@ void Renderer::RenderScene() {
 
 		triangle->Draw();
 	}
+}
+
+void Renderer::UpdateScene(float dt) {
+	camera->UpdateCamera(dt);
+	viewMatrix = camera->BuildViewMatrix();
 }
 
 void Renderer::SwitchToPerspective() {
