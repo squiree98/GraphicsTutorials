@@ -39,6 +39,5 @@ int main()	{
 			Shader::ReloadAllShaders();
 		}
 	}
-
 	return 0;
 }

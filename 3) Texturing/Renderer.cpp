@@ -31,6 +31,7 @@ void Renderer::RenderScene() {
 
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex"), 0);
 	glActiveTexture(GL_TEXTURE0);
+
 	glBindTexture(GL_TEXTURE_2D, texture);
 
 	triangle->Draw();

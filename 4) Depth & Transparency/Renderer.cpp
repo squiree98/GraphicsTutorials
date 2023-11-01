@@ -1,6 +1,6 @@
 #include "Renderer.h"
 
-Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
+Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	meshes[0] = Mesh::GenerateQuad();
 	meshes[1] = Mesh::GenerateTriangle();
 
