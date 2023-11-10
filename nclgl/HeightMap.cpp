@@ -57,6 +57,7 @@ HeightMap::HeightMap(const string& name) {
 		}
 	}
 	GenerateNormals();
+	GenerateTangents();
 	BufferData();
 
 	heightMapSize.x = vertexScale.x * (iWidth - 1);
