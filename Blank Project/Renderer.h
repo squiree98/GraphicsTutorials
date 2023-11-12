@@ -37,7 +37,8 @@ protected:
 
 	Camera*	   camera;
 
-	GLuint	   terrainTexture;
+	GLuint	   rockTexture;
+	GLuint	   grassTexture;
 
 	//Frustrum frameFrustrum;
 

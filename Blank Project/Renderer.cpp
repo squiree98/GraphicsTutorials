@@ -17,20 +17,23 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent)	{
 	Vector3 heightMapSize = terrain->GetHeightMapSize();
 	camera = new Camera(-45.0f, 0.0f, heightMapSize * Vector3(0.5f, 1.0f, 0.5f));
 
-	SetTextureRepeating(terrainTexture, true);
+	SetTextureRepeating(rockTexture, true);
+	SetTextureRepeating(grassTexture, true);
 
-	terrainShader = new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
+	terrainShader = new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
 	if (!terrainShader->LoadSuccess())
 		return;
 
-	terrainTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	rockTexture =  SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	grassTexture = SOIL_load_OGL_texture(TEXTUREDIR"grass.jpg",       SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
-	if (!terrainTexture)
+
+	if (!rockTexture || !grassTexture)
 		return;
 
-	SceneNode* terrainNode = CreateTerrain();
-	Planet* planetNode = CreatePlanet(terrainNode, Vector3(50,50,50), 50.0f, Vector3(3000, 1000, 3000), false);
-	Planet* planetMoonNode = CreatePlanet(planetNode, Vector3(20,20,20), 20.0f, Vector3(-100, 0, -100), true);
+	SceneNode*	terrainNode    = CreateTerrain();
+	Planet*		planetNode	   = CreatePlanet(terrainNode, Vector3(50,50,50), 50.0f, Vector3(3000, 1000, 3000), false);
+	Planet*		planetMoonNode = CreatePlanet(planetNode, Vector3(20,20,20), 20.0f, Vector3(-100, 0, -100), true);
 
 
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
@@ -62,9 +65,16 @@ void Renderer::RenderScene()	{
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
 	BindShader(terrainShader);
-	UpdateShaderMatrices();
 
-	glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "rockTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, rockTexture);
+
+	glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "grassTex"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, grassTexture);
+
+	UpdateShaderMatrices();
 
 	DrawNodes();
 
@@ -133,7 +143,7 @@ SceneNode* Renderer::CreateTerrain() {
 	SceneNode* terrainNode = new SceneNode();
 	terrainNode->SetTransform(Matrix4::Translation(Vector3(0, 0, 0)));
 	terrainNode->SetMesh(terrain);
-	terrainNode->SetTexture(terrainTexture);
+	terrainNode->SetTexture(rockTexture);
 
 	root->AddChild(terrainNode);
 
@@ -142,7 +152,7 @@ SceneNode* Renderer::CreateTerrain() {
 
 Planet* Renderer::CreatePlanet(SceneNode* parent, Vector3 scale, float boundingRadius, Vector3 transform, bool orbitParent) {
 	Mesh* sphere = Mesh::LoadFromMeshFile("Sphere.msh");
-	Planet* planetNode = new Planet(sphere, scale, boundingRadius, terrainTexture, Matrix4::Translation(transform), orbitParent);
+	Planet* planetNode = new Planet(sphere, scale, boundingRadius, rockTexture, Matrix4::Translation(transform), orbitParent);
 
 	parent->AddChild(planetNode);
 
