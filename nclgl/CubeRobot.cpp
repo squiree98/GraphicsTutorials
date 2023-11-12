@@ -1,7 +1,6 @@
 #include "CubeRobot.h"
 
-CubeRobot::CubeRobot(Mesh* cube, Vector3 offset) {
-	SetTransform(Matrix4::Translation(offset));
+CubeRobot::CubeRobot(Mesh* cube) {
 
 	SceneNode* body = new SceneNode(cube, Vector4(1, 0, 0, 1));
 	body->SetModelScale(Vector3(10, 15, 5));

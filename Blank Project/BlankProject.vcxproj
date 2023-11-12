@@ -137,9 +137,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="GraphicsCoursework.cpp" />
+    <ClCompile Include="Planet.cpp" />
     <ClCompile Include="Renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Planet.h" />
     <ClInclude Include="Renderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -3,6 +3,7 @@
 #include "../nclgl/SceneNode.h"
 #include "../nclgl/Camera.h"
 #include "../nclgl/HeightMap.h"
+#include "Planet.h"
 
 #include <algorithm>
 
@@ -14,11 +15,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent)	{
 	root = new SceneNode();
 
 	Vector3 heightMapSize = terrain->GetHeightMapSize();
-	camera = new Camera(-45.0f, 0.0f, heightMapSize * Vector3(0.5f, 5.0f, 0.5f));
-
-	terrainTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	if(!terrainTexture)
-		return;
+	camera = new Camera(-45.0f, 0.0f, heightMapSize * Vector3(0.5f, 1.0f, 0.5f));
 
 	SetTextureRepeating(terrainTexture, true);
 
@@ -26,12 +23,15 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent)	{
 	if (!terrainShader->LoadSuccess())
 		return;
 
-	SceneNode* terrainNode = new SceneNode();
-	terrainNode->SetTransform(Matrix4::Translation(Vector3(0,0,0)));
-	terrainNode->SetMesh(terrain);
-	terrainNode->SetTexture(terrainTexture);
+	terrainTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
-	root->AddChild(terrainNode);
+	if (!terrainTexture)
+		return;
+
+	SceneNode* terrainNode = CreateTerrain();
+	Planet* planetNode = CreatePlanet(terrainNode, Vector3(50,50,50), 50.0f, Vector3(3000, 1000, 3000), false);
+	Planet* planetMoonNode = CreatePlanet(planetNode, Vector3(20,20,20), 20.0f, Vector3(-100, 0, -100), true);
+
 
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
@@ -50,7 +50,7 @@ Renderer::~Renderer(void)	{
 void Renderer::UpdateScene(float dt) {
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
-	frameFrustrum.FromMatrix(projMatrix * viewMatrix);
+	//frameFrustrum.FromMatrix(projMatrix * viewMatrix);
 
 	root->Update(dt);
 }
@@ -70,6 +70,8 @@ void Renderer::RenderScene()	{
 
 	ClearNodeLists();
 }
+
+// Methods dealing with node hierarchy
 
 void Renderer::BuildNodeLists(SceneNode* root) {
 	//if (frameFrustrum.InsideFrustrum(*root)) {
@@ -110,11 +112,11 @@ void Renderer::DrawNode(SceneNode* node) {
 		glUniformMatrix4fv(glGetUniformLocation(terrainShader->GetProgram(), "modelMatrix"), 1, false, model.values);
 		glUniform4fv(glGetUniformLocation(terrainShader->GetProgram(), "nodeColour"), 1, (float*)&node->GetColour());
 
-		terrainTexture = node->GetTexture();
+		GLuint nodeTexture = node->GetTexture();
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, terrainTexture);
+		glBindTexture(GL_TEXTURE_2D, nodeTexture);
 
-		glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "useTexture"), terrainTexture);
+		glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "useTexture"), nodeTexture);
 
 		node->Draw(*this);
 	}
@@ -123,4 +125,26 @@ void Renderer::DrawNode(SceneNode* node) {
 void Renderer::ClearNodeLists() {
 	transparentNodeList.clear();
 	nodeList.clear();
+}
+
+// Methods that render scene
+
+SceneNode* Renderer::CreateTerrain() {
+	SceneNode* terrainNode = new SceneNode();
+	terrainNode->SetTransform(Matrix4::Translation(Vector3(0, 0, 0)));
+	terrainNode->SetMesh(terrain);
+	terrainNode->SetTexture(terrainTexture);
+
+	root->AddChild(terrainNode);
+
+	return terrainNode;
+}
+
+Planet* Renderer::CreatePlanet(SceneNode* parent, Vector3 scale, float boundingRadius, Vector3 transform, bool orbitParent) {
+	Mesh* sphere = Mesh::LoadFromMeshFile("Sphere.msh");
+	Planet* planetNode = new Planet(sphere, scale, boundingRadius, terrainTexture, Matrix4::Translation(transform), orbitParent);
+
+	parent->AddChild(planetNode);
+
+	return planetNode;
 }

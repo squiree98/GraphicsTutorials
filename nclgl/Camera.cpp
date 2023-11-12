@@ -5,7 +5,7 @@
 void Camera::UpdateCamera(float dt) {
 	// get position of mouse
 	pitch -= (Window::GetMouse()->GetRelativePosition().y);
-	yaw -= (Window::GetMouse()->GetRelativePosition().x);
+	yaw   -= (Window::GetMouse()->GetRelativePosition().x);
 
 	pitch = std::min(pitch, 90.0f);
 	pitch = std::max(pitch,-90.0f);
@@ -19,7 +19,7 @@ void Camera::UpdateCamera(float dt) {
 
 	// -1 because in OpenGL forward as -z
 	Vector3 forward = rotation * Vector3(0, 0, -1);
-	Vector3 right = rotation * Vector3(1, 0, 0);
+	Vector3 right   = rotation * Vector3(1, 0, 0);
 
 	float speed = 30.0f * dt;
 

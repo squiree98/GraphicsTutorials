@@ -1,12 +1,13 @@
 #pragma once
 
 #include "../NCLGL/OGLRenderer.h"
-#include "../nclgl/Frustrum.h"
+//#include "../nclgl/Frustrum.h"
 
 class Camera;
 class Shader;
 class HeightMap;
 class SceneNode;
+class Planet;
 
 class Renderer : public OGLRenderer	{
 public:
@@ -23,6 +24,10 @@ protected:
 	void ClearNodeLists();
 	void DrawNodes();
 	void DrawNode(SceneNode* node);
+
+	// render scene
+	SceneNode* CreateTerrain();
+	Planet* CreatePlanet(SceneNode* parent, Vector3 scale, float boundingRadius, Vector3 transform, bool orbitParent);
 
 	SceneNode* root;
 
