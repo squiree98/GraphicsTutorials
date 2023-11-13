@@ -5,7 +5,7 @@ SceneNode::SceneNode(Mesh* mesh, Vector4 colour) {
 	this->colour = colour;
 	parent = NULL;
 	modelScale = Vector3(1, 1, 1);
-
+	shader = NULL;
 	boundingRadius = 1.0f;
 	distanceFromCamera = 0.0f;
 	texture = 0;
@@ -37,4 +37,13 @@ void SceneNode::Update(float dt) {
 	{
 		(*i)->Update(dt);
 	}
+}
+
+// ignore
+GLuint SceneNode::GetGrassTexture() {
+	// to be overriden
+}
+//ignore
+GLuint SceneNode::GetRockTexture() {
+	// to be overriden
 }

@@ -5,6 +5,7 @@
 #include "Vector4.h"
 #include "Mesh.h"
 #include <vector>
+#include "Shader.h"
 
 class SceneNode
 {
@@ -25,6 +26,9 @@ public:
 	Mesh*			GetMesh() const							{ return mesh; }
 	void			SetMesh(Mesh* newMesh)					{ mesh = newMesh; }
 
+	int				GetIsHeightMap() const					{ return isHeightMap; }
+	void			SetIsHeightMap(int value)				{ isHeightMap = value; }
+
 	std::vector<SceneNode*>::const_iterator GetChildIteratorStart() { return children.begin(); }
 
 	std::vector<SceneNode*>::const_iterator GetChildIteratorEnd() { return children.end(); }
@@ -44,6 +48,12 @@ public:
 	void			SetTexture(GLuint tex)					{ texture = tex; }
 	GLuint			GetTexture() const						{ return texture; }
 
+	virtual GLuint	GetGrassTexture();
+	virtual GLuint	GetRockTexture();
+
+	void			SetShader(Shader* inputShader)			{ shader = inputShader; }
+	Shader*			GetShader()								{ return shader; }
+
 	static bool		CompareByCameraDistance(SceneNode* a, SceneNode* b) {
 		return (a->distanceFromCamera < b->distanceFromCamera) ? true : false;
 	}
@@ -62,5 +72,7 @@ protected:
 	float distanceFromCamera;
 	float boundingRadius;
 	GLuint texture;
+	Shader* shader;
+	int isHeightMap;
 };
 

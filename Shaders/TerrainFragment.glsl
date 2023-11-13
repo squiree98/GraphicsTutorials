@@ -5,16 +5,18 @@ uniform sampler2D grassTex;
 
 in Vertex {
 	vec2 texCoord;
+    vec3 normal;
     float worldPosY;
 } IN;
 
 out vec4 fragColour;
 
 void main(void) {
-    if (IN.worldPosY > 100.0f) {
-	    fragColour = texture(grassTex, IN.texCoord);
-    }
+    float slope = 1-IN.normal.y;
+    if (slope > 0.3f) {
+        fragColour = texture(rockTex, IN.texCoord);
+     }
     else {
-	    fragColour = texture(rockTex, IN.texCoord);
+        fragColour = texture(grassTex, IN.texCoord);
     }
 }

@@ -6,10 +6,12 @@ uniform mat4 projMatrix;
 uniform mat4 textureMatrix;
 
 in vec3 position;
+in vec3 normal;
 in vec2 texCoord;
 
 out Vertex {
 	vec2 texCoord;
+	vec3 normal;
     float worldPosY;
 } OUT;
 
@@ -20,4 +22,5 @@ void main(void) {
 
     vec4 worldPos = (modelMatrix * vec4(position, 1));
     OUT.worldPosY = worldPos.y;
+	OUT.normal = normal;
 }

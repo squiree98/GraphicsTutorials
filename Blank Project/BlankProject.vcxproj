@@ -137,12 +137,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="GraphicsCoursework.cpp" />
-    <ClCompile Include="Planet.cpp" />
+    <ClCompile Include="PlanetNode.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="TerrainNode.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Planet.h" />
+    <ClInclude Include="PlanetNode.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="TerrainNode.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

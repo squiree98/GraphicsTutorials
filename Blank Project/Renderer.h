@@ -1,47 +1,50 @@
 #pragma once
 
-#include "../NCLGL/OGLRenderer.h"
-//#include "../nclgl/Frustrum.h"
+#include "../nclgl/OGLRenderer.h"
+#include "../nclgl/SceneNode.h"
 
 class Camera;
 class Shader;
 class HeightMap;
-class SceneNode;
-class Planet;
+class TerrainNode;
+class PlanetNode;
 
-class Renderer : public OGLRenderer	{
+class Renderer : public OGLRenderer
+{
 public:
 	Renderer(Window &parent);
-	 ~Renderer(void);
+	~Renderer(void);
 
-	 void RenderScene()				override;
-	 void UpdateScene(float msec)	override;
+	void	UpdateScene(float dt)	override;
+	void	RenderScene()			override;
 
-protected:
-	// build node graph hierarchy
+	// methods for scene hierarchy
 	void BuildNodeLists(SceneNode* from);
 	void SortNodeLists();
 	void ClearNodeLists();
 	void DrawNodes();
 	void DrawNode(SceneNode* node);
 
-	// render scene
-	SceneNode* CreateTerrain();
-	Planet* CreatePlanet(SceneNode* parent, Vector3 scale, float boundingRadius, Vector3 transform, bool orbitParent);
+	// methods used to draw terrain
+	void DrawTerrain(SceneNode* node);
+	void DrawPlanets(SceneNode* node);
 
+private:
+	Camera* camera;
+
+	Shader* terrainShader;
+	Shader* planetShader;
+
+	GLuint grassTexture;
+	GLuint rockTexture;
+
+	// variables for scene hierarchy
 	SceneNode* root;
-
-	Shader*	   terrainShader;
-	
-	HeightMap* terrain;
-
-	Camera*	   camera;
-
-	GLuint	   rockTexture;
-	GLuint	   grassTexture;
-
-	//Frustrum frameFrustrum;
+	TerrainNode* terrainNode;
+	PlanetNode* planetNode;
+	PlanetNode* planetNodeMoon;
 
 	vector<SceneNode*> transparentNodeList;
 	vector<SceneNode*> nodeList;
 };
+
