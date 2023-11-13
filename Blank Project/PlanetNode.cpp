@@ -19,5 +19,7 @@ void PlanetNode::Draw(const OGLRenderer& r) {
 }
 
 void PlanetNode::Update(float dt) {
+	SetTransform(GetTransform() * Matrix4::Rotation(30.0f * dt, Vector3(0, 1, 0)));
+
 	SceneNode::Update(dt);
 }

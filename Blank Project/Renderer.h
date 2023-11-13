@@ -4,6 +4,7 @@
 #include "../nclgl/SceneNode.h"
 
 class Camera;
+class Light;
 class Shader;
 class HeightMap;
 class TerrainNode;
@@ -30,13 +31,18 @@ public:
 	void DrawPlanets(SceneNode* node);
 
 private:
+	HeightMap* heightMap;
+
 	Camera* camera;
+
+	Light* light;
 
 	Shader* terrainShader;
 	Shader* planetShader;
 
 	GLuint grassTexture;
 	GLuint rockTexture;
+	GLuint redPlanetTexture;
 
 	// variables for scene hierarchy
 	SceneNode* root;

@@ -15,6 +15,5 @@ public:
 	GLuint	GetRockTexture()			override { return NULL; }
 
 protected:
-
 };
 
