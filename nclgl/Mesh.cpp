@@ -555,9 +555,6 @@ Mesh* Mesh::LoadFromMeshFile(const string& name) {
 		mesh->weightIndices = new int[numVertices * 4];
 		memcpy(mesh->weightIndices, readWeightIndices.data(), numVertices * sizeof(int) * 4);
 	}
-
-	mesh->GenerateNormals();
-	mesh->GenerateTangents();
 	mesh->BufferData();
 
 	return mesh;

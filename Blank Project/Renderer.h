@@ -35,10 +35,10 @@ private:
 
 	Camera* camera;
 
-	Light* light;
-
 	Shader* terrainShader;
 	Shader* planetShader;
+
+	Vector3 heightMapSize;
 
 	GLuint grassTexture;
 	GLuint rockTexture;

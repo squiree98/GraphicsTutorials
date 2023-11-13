@@ -12,7 +12,7 @@
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// set meshes up
 	HeightMap* heightMap = new HeightMap(TEXTUREDIR"noise.png");
-	Vector3 heightMapSize = heightMap->GetHeightMapSize();
+	heightMapSize = heightMap->GetHeightMapSize();
 	Mesh* sphere = Mesh::LoadFromMeshFile("Sphere.msh");
 
 	// set textures up
@@ -26,13 +26,13 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// set shaders up
 	terrainShader = new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
-	planetShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
+	planetShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
 	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess())
 		return;
 
 	// set scene nodes up
 	root = new SceneNode();
-	terrainNode =		new TerrainNode(heightMap, grassTexture, rockTexture, planetShader);
+	terrainNode =		new TerrainNode(heightMap, grassTexture, rockTexture, terrainShader);
 	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(50,50,50), Vector3(3000,1000,3000));
 	planetNodeMoon =	new PlanetNode (sphere, rockTexture, planetShader, Vector3(20, 20, 20), Vector3(100, 0, 0));
 	root->AddChild(terrainNode);
@@ -40,8 +40,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	planetNode->AddChild(planetNodeMoon);
 
 	// set the camera and lighting up
-	camera = new Camera(-45.0f, 0.0f, Vector3(3000, 1000, 3000));
-	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightMapSize.x);
+	camera = new Camera(-45.0f, 0.0f, Vector3(0.5f, 1.5f, 0.5f) * heightMapSize);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
 	// turn depth test on and start rendering
@@ -140,13 +139,18 @@ void Renderer::DrawTerrain(SceneNode* node) {
 void Renderer::DrawPlanets(SceneNode* node) {
 	BindShader(node->GetShader());
 
-	// set texture
-	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "diffuseTex"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, node->GetTexture());
-
-	// tell shader where camera is for lighting
-	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 	UpdateShaderMatrices();
-	SetShaderLight(*light);
+
+	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "diffuseTex"), 0);
+
+	Matrix4 model = node->GetWorldTransform() * Matrix4::Scale(node->GetModelScale());
+
+	glUniformMatrix4fv(glGetUniformLocation(node->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
+	glUniform4fv(glGetUniformLocation(node->GetShader()->GetProgram(), "nodeColour"), 1, (float*)&node->GetColour());
+
+	GLuint texture = node->GetTexture();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "useTexture"), texture);
 }

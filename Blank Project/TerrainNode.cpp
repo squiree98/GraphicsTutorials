@@ -10,7 +10,7 @@ TerrainNode::TerrainNode(HeightMap* heightMap, GLuint givenGrassTexture, GLuint 
 	this->distanceFromCamera = 0.0f;
 	this->grassTexture = givenGrassTexture;
 	this->rockTexture = givenRockTexture;
-	this->isHeightMap = 0;
+	this->isHeightMap = 1;
 	// shouldn't be used but if needed
 	this->texture = givenGrassTexture;
 }
