@@ -35,6 +35,8 @@ private:
 
 	Camera* camera;
 
+	Light* light;
+
 	Shader* terrainShader;
 	Shader* planetShader;
 

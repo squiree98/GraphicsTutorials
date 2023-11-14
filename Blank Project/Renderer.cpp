@@ -23,10 +23,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		return;
 	SetTextureRepeating(rockTexture, true);
 	SetTextureRepeating(grassTexture, true);
+	SetTextureRepeating(redPlanetTexture, true);
 
 	// set shaders up
 	terrainShader = new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
-	planetShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
+	planetShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
 	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess())
 		return;
 
@@ -41,6 +42,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// set the camera and lighting up
 	camera = new Camera(-45.0f, 0.0f, Vector3(0.5f, 1.5f, 0.5f) * heightMapSize);
+	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightMapSize.x * 0.5f);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
 	// turn depth test on and start rendering
@@ -141,16 +143,14 @@ void Renderer::DrawPlanets(SceneNode* node) {
 
 	UpdateShaderMatrices();
 
-	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "diffuseTex"), 0);
-
+	// gett world transform of vertices not local transform
 	Matrix4 model = node->GetWorldTransform() * Matrix4::Scale(node->GetModelScale());
-
 	glUniformMatrix4fv(glGetUniformLocation(node->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
-	glUniform4fv(glGetUniformLocation(node->GetShader()->GetProgram(), "nodeColour"), 1, (float*)&node->GetColour());
 
-	GLuint texture = node->GetTexture();
+	// set Texture up
+	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "diffuseTex"), 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glBindTexture(GL_TEXTURE_2D, node->GetTexture());
 
-	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "useTexture"), texture);
+	SetShaderLight(*light);
 }
