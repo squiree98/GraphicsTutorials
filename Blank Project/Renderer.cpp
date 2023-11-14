@@ -57,7 +57,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// draw water node seperate as it must be drawn last
 	// set the camera and lighting up
 	camera = new Camera(-45.0f, 0.0f, Vector3(0.5f, 1.5f, 0.5f) * heightMapSize);
-	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightMapSize.x * 2);
+	light = new Light(heightMapSize * Vector3(0.8f, 10.0f, 0.8f), Vector4(1, 1, 1, 1), heightMapSize.x * 2);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
 	// turn depth test on and start rendering
