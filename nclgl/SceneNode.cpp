@@ -42,8 +42,10 @@ void SceneNode::Update(float dt) {
 // ignore
 GLuint SceneNode::GetGrassTexture() {
 	// to be overriden
+	return NULL;
 }
 //ignore
 GLuint SceneNode::GetRockTexture() {
 	// to be overriden
+	return NULL;
 }

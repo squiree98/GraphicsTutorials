@@ -19,15 +19,18 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	rockTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	grassTexture = SOIL_load_OGL_texture(TEXTUREDIR"grass.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	redPlanetTexture = SOIL_load_OGL_texture(TEXTUREDIR"red_planet.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	if (!rockTexture || !grassTexture)
+	bumpMap = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	if (!rockTexture || !grassTexture || !redPlanetTexture || !bumpMap)
 		return;
 	SetTextureRepeating(rockTexture, true);
 	SetTextureRepeating(grassTexture, true);
 	SetTextureRepeating(redPlanetTexture, true);
+	SetTextureRepeating(bumpMap, true);
 
 	// set shaders up
 	terrainShader = new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
-	planetShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
+	//planetShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
+	planetShader = new Shader("BumpVertex.glsl", "BumpFragment.glsl");
 	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess())
 		return;
 
@@ -42,7 +45,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// set the camera and lighting up
 	camera = new Camera(-45.0f, 0.0f, Vector3(0.5f, 1.5f, 0.5f) * heightMapSize);
-	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightMapSize.x * 0.5f);
+	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightMapSize.x);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
 	// turn depth test on and start rendering
@@ -136,11 +139,12 @@ void Renderer::DrawTerrain(SceneNode* node) {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, node->GetGrassTexture());
 	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "grassTex"), 1);
+
+	SetShaderLight(*light);
 }
 
 void Renderer::DrawPlanets(SceneNode* node) {
 	BindShader(node->GetShader());
-
 	UpdateShaderMatrices();
 
 	// gett world transform of vertices not local transform
@@ -151,6 +155,12 @@ void Renderer::DrawPlanets(SceneNode* node) {
 	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "diffuseTex"), 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, node->GetTexture());
+
+	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "bumpTex"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bumpMap);
+
+	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 
 	SetShaderLight(*light);
 }

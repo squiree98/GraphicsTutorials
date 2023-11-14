@@ -46,6 +46,8 @@ private:
 	GLuint rockTexture;
 	GLuint redPlanetTexture;
 
+	GLuint bumpMap;
+
 	// variables for scene hierarchy
 	SceneNode* root;
 	TerrainNode* terrainNode;
