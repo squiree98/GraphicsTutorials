@@ -31,21 +31,23 @@ public:
 	void DrawPlanets(SceneNode* node);
 
 private:
+	// height map and size of heightmap
 	HeightMap* heightMap;
+	Vector3 heightMapSize;
 
 	Camera* camera;
 
+	// lighting
 	Light* light;
 
+	// shaders
 	Shader* terrainShader;
 	Shader* planetShader;
 
-	Vector3 heightMapSize;
-
+	// textures + bump maps
 	GLuint grassTexture;
 	GLuint rockTexture;
 	GLuint redPlanetTexture;
-
 	GLuint bumpMap;
 
 	// variables for scene hierarchy

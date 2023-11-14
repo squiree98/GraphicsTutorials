@@ -17,7 +17,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// set textures up
 	rockTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	grassTexture = SOIL_load_OGL_texture(TEXTUREDIR"grass.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	grassTexture = SOIL_load_OGL_texture(TEXTUREDIR"grass.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	redPlanetTexture = SOIL_load_OGL_texture(TEXTUREDIR"red_planet.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	bumpMap = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	if (!rockTexture || !grassTexture || !redPlanetTexture || !bumpMap)
@@ -29,7 +29,6 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// set shaders up
 	terrainShader = new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
-	//planetShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
 	planetShader = new Shader("BumpVertex.glsl", "BumpFragment.glsl");
 	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess())
 		return;
@@ -54,7 +53,15 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 }
 
 Renderer::~Renderer(void) {
-	// fill in later
+	delete heightMap;
+	delete light;
+	delete camera;
+	delete terrainShader;
+	delete planetShader;
+	delete root;
+	delete terrainNode;
+	delete planetNode;;
+	delete planetNodeMoon;
 }
 
 void Renderer::UpdateScene(float dt) {
