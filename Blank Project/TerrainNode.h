@@ -6,16 +6,16 @@
 class TerrainNode : public SceneNode
 {
 public:
-	TerrainNode(HeightMap* heightMap, GLuint grassTexture, GLuint rockTexture, Shader* shader);
-	~TerrainNode(void) {}
+	TerrainNode(HeightMap* heightMap, GLuint planetTexture, GLuint rockTexture, Shader* shader);
+	~TerrainNode(void);
 
 	void Update(float dt) override;
 	void Draw(const OGLRenderer& r) override;
 
-	GLuint GetGrassTexture() override { return grassTexture; }
+	GLuint GetPlanetTexture() override { return planetTexture; }
 	GLuint GetRockTexture() override { return rockTexture; }
 protected:
 	GLuint rockTexture;
-	GLuint grassTexture;
+	GLuint planetTexture;
 };
 

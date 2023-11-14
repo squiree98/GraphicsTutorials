@@ -9,6 +9,7 @@ class Shader;
 class HeightMap;
 class TerrainNode;
 class PlanetNode;
+class WaterNode;
 
 class Renderer : public OGLRenderer
 {
@@ -27,8 +28,10 @@ public:
 	void DrawNode(SceneNode* node);
 
 	// methods used to draw terrain
+	void DrawSkyBox();
 	void DrawTerrain(SceneNode* node);
 	void DrawPlanets(SceneNode* node);
+	void DrawWater();
 
 private:
 	// height map and size of heightmap
@@ -37,17 +40,24 @@ private:
 
 	Camera* camera;
 
+	Mesh* quad;
+
 	// lighting
 	Light* light;
 
 	// shaders
 	Shader* terrainShader;
 	Shader* planetShader;
+	Shader* waterShader;
+	Shader* skyBoxShader;
 
-	// textures + bump maps
-	GLuint grassTexture;
+	// textures + bump maps = cube map
+	GLuint cubeMap;
+	GLuint planetTexture;
 	GLuint rockTexture;
 	GLuint redPlanetTexture;
+	GLuint waterTexture;
+
 	GLuint bumpMap;
 
 	// variables for scene hierarchy
@@ -55,6 +65,8 @@ private:
 	TerrainNode* terrainNode;
 	PlanetNode* planetNode;
 	PlanetNode* planetNodeMoon;
+	WaterNode* waterNode;
+
 
 	vector<SceneNode*> transparentNodeList;
 	vector<SceneNode*> nodeList;

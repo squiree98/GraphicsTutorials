@@ -48,7 +48,7 @@ public:
 	void			SetTexture(GLuint tex)					{ texture = tex; }
 	GLuint			GetTexture() const						{ return texture; }
 
-	virtual GLuint	GetGrassTexture();
+	virtual GLuint	GetPlanetTexture();
 	virtual GLuint	GetRockTexture();
 
 	void			SetShader(Shader* inputShader)			{ shader = inputShader; }

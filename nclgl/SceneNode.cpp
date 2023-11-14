@@ -40,7 +40,7 @@ void SceneNode::Update(float dt) {
 }
 
 // ignore
-GLuint SceneNode::GetGrassTexture() {
+GLuint SceneNode::GetPlanetTexture() {
 	// to be overriden
 	return NULL;
 }

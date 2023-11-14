@@ -13,6 +13,12 @@ PlanetNode::PlanetNode(Mesh* mesh, GLuint texture, Shader* newShader, Vector3 sc
 	this->isHeightMap = 0;
 }
 
+PlanetNode::~PlanetNode(void) {
+	for (unsigned int i = 0; i < children.size(); ++i) {
+		delete children[1];
+	}
+}
+
 void PlanetNode::Draw(const OGLRenderer& r) {
 	// set texture and shader
 	SceneNode::Draw(r);
