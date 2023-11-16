@@ -3,6 +3,8 @@
 SceneNode::SceneNode(Mesh* mesh, Vector4 colour) {
 	this->mesh = mesh;
 	this->colour = colour;
+	this->isHeightMap = 0;
+	this->isSkinned = 0;
 	parent = NULL;
 	modelScale = Vector3(1, 1, 1);
 	shader = NULL;

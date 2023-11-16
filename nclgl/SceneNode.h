@@ -29,6 +29,9 @@ public:
 	int				GetIsHeightMap() const					{ return isHeightMap; }
 	void			SetIsHeightMap(int value)				{ isHeightMap = value; }
 
+	int				GetIsSkinned() const					{ return isSkinned; }
+	void			SetIsSkinned(int value)					{ isSkinned = value; }
+
 	std::vector<SceneNode*>::const_iterator GetChildIteratorStart() { return children.begin(); }
 
 	std::vector<SceneNode*>::const_iterator GetChildIteratorEnd() { return children.end(); }
@@ -74,5 +77,6 @@ protected:
 	GLuint texture;
 	Shader* shader;
 	int isHeightMap;
+	int isSkinned;
 };
 

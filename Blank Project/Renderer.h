@@ -10,6 +10,7 @@ class HeightMap;
 class TerrainNode;
 class PlanetNode;
 class WaterNode;
+class SkinnedNode;
 
 class Renderer : public OGLRenderer
 {
@@ -35,6 +36,7 @@ private:
 	void DrawShadowScene();
 	void DrawTerrain(SceneNode* node);
 	void DrawPlanets(SceneNode* node);
+	void DrawSkinned(SceneNode* node);
 	void DrawWater();
 
 	// height map and size of heightmap
@@ -54,6 +56,7 @@ private:
 	Shader* waterShader;
 	Shader* skyBoxShader;
 	Shader* shadowShader;
+	Shader* skinnedMeshShader;
 
 	// textures + bump maps + cube map + shadow maps
 	GLuint cubeMap;
@@ -73,6 +76,7 @@ private:
 	PlanetNode* planetNode;
 	PlanetNode* planetNodeMoon;
 	WaterNode* waterNode;
+	SkinnedNode* skinnedNode;
 
 
 	vector<SceneNode*> transparentNodeList;

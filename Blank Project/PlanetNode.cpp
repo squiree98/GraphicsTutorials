@@ -11,6 +11,7 @@ PlanetNode::PlanetNode(Mesh* mesh, GLuint texture, Shader* newShader, Vector3 sc
 	this->texture = texture;
 	this->transform = Matrix4::Translation(transform);
 	this->isHeightMap = 0;
+	this->isSkinned = 0;
 }
 
 PlanetNode::~PlanetNode(void) {

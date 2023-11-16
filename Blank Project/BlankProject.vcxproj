@@ -139,12 +139,14 @@
     <ClCompile Include="GraphicsCoursework.cpp" />
     <ClCompile Include="PlanetNode.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="SkinnedNode.cpp" />
     <ClCompile Include="TerrainNode.cpp" />
     <ClCompile Include="WaterNode.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PlanetNode.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="SkinnedNode.h" />
     <ClInclude Include="TerrainNode.h" />
     <ClInclude Include="WaterNode.h" />
   </ItemGroup>

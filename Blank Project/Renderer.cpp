@@ -2,11 +2,14 @@
 #include "../nclgl/Shader.h"
 #include "../nclgl/HeightMap.h"
 #include "../nclgl/Light.h"
+#include "../nclgl/MeshMaterial.h"
+#include "../nclgl/MeshAnimation.h"
 
 #include "Renderer.h"
 #include "TerrainNode.h"
 #include "PlanetNode.h"
 #include "WaterNode.h"
+#include "SkinnedNode.h"
 
 #include <algorithm>
 
@@ -18,10 +21,14 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	heightMapSize = heightMap->GetHeightMapSize();
 	Mesh* sphere = Mesh::LoadFromMeshFile("Sphere.msh");
 	quad = Mesh::GenerateQuad();
+	// set up skinned mesh data
+	Mesh* skinnedMesh = Mesh::LoadFromMeshFile("Role_T.msh");
+	MeshAnimation* anim = new MeshAnimation("Role_T.anm");
+	MeshMaterial* material = new MeshMaterial("Role_T.mat");
 
 	// set textures up
 	rockTexture			= SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	planetTexture		= SOIL_load_OGL_texture(TEXTUREDIR"images.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	planetTexture		= SOIL_load_OGL_texture(TEXTUREDIR"images_1.jpeg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	redPlanetTexture	= SOIL_load_OGL_texture(TEXTUREDIR"red_planet.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	waterTexture		= SOIL_load_OGL_texture(TEXTUREDIR"water.TGA", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	bumpMap				= SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
@@ -39,12 +46,13 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	SetTextureRepeating(bumpMap, true);
 
 	// set shaders up
-	terrainShader =  new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
-	planetShader =   new Shader("ShadowSceneVertex.glsl", "ShadowSceneFragment.glsl");
-	waterShader =	 new Shader("ReflectVertex.glsl", "ReflectFragment.glsl");
-	skyBoxShader =   new Shader("SkyBoxVertex.glsl", "SkyBoxFragment.glsl");
-	shadowShader =	 new Shader("ShadowVertex.glsl", "ShadowFragment.glsl");
-	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess() || !shadowShader->LoadSuccess())
+	terrainShader =		new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
+	planetShader =		new Shader("ShadowSceneVertex.glsl", "ShadowSceneFragment.glsl");
+	waterShader =		new Shader("ReflectVertex.glsl", "ReflectFragment.glsl");
+	skyBoxShader =		new Shader("SkyBoxVertex.glsl", "SkyBoxFragment.glsl");
+	shadowShader =		new Shader("ShadowVertex.glsl", "ShadowFragment.glsl");
+	skinnedMeshShader = new Shader("SkinningVertex.glsl", "TexturedFragment.glsl");
+	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess() || !shadowShader->LoadSuccess() || !skinnedMeshShader->LoadSuccess())
 		return;
 
 	// set shadow texture up
@@ -65,12 +73,14 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// set scene nodes up
 	root = new SceneNode();
-	terrainNode =		new TerrainNode(heightMap, planetTexture, rockTexture, planetShader);
+	terrainNode =		new TerrainNode(heightMap, planetTexture, rockTexture, terrainShader);
 	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(50,50,50), Vector3(3000,1000,3000));
 	planetNodeMoon =	new PlanetNode (sphere, rockTexture, planetShader, Vector3(20, 20, 20), Vector3(100, 0, 0));
 	waterNode =			new WaterNode(quad, waterTexture, waterShader, terrainNode->GetModelScale());
+	skinnedNode =		new SkinnedNode(skinnedMesh, anim, material, skinnedMeshShader);
 	root->AddChild(terrainNode);
 	terrainNode->AddChild(planetNode);
+	terrainNode->AddChild(skinnedNode);
 	planetNode->AddChild(planetNodeMoon);
 
 	// draw water node seperate as it must be drawn last
@@ -124,7 +134,7 @@ void Renderer::RenderScene() {
 
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-	DrawShadowScene();
+	//DrawShadowScene();
 
 	DrawSkyBox();
 
@@ -174,7 +184,10 @@ void Renderer::DrawNode(SceneNode* node) {
 		if (node->GetIsHeightMap() == 1) {
 			DrawTerrain(node);
 		}
-		else {
+		if (node->GetIsSkinned() == 1) {
+			DrawSkinned(node);
+		}
+		if (node->GetIsHeightMap() == 0 && node->GetIsSkinned() == 0) {
 			DrawPlanets(node);
 		}
 		// draw node
@@ -249,6 +262,19 @@ void Renderer::DrawPlanets(SceneNode* node) {
 	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 
 	SetShaderLight(*light);
+}
+
+void Renderer::DrawSkinned(SceneNode* node) {
+	// for skinned mesh
+	glEnable(GL_CULL_FACE);
+
+	BindShader(node->GetShader());
+	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "diffuseTex"), 0);
+
+	UpdateShaderMatrices();
+
+	node->Draw(*this);
+	glDisable(GL_CULL_FACE);
 }
 
 void Renderer::DrawWater(){
