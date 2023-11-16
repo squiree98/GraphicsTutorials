@@ -7,12 +7,11 @@ SkinnedNode::SkinnedNode(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material
 	this->shader = shader;
 	this->isSkinned = 1;
 	this->isHeightMap = 0;
-	this->modelScale = Vector3(0.5f, 0.5f, 0.5f);
-	this->transform = Matrix4::Rotation(90, Vector3(1, 0, 0));
+	this->modelScale = Vector3(0.02f, 0.3f, 0.02f);
+	this->transform = Matrix4::Translation(Vector3(0, 5, 0));
 
 	// for every submesh get its respective texture
-	for (int i = 0; i < mesh->GetSubMeshCount(); i++)
-	{
+	for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
 		const MeshMaterialEntry* matEntry = material->GetMaterialForLayer(i);
 		const string* filename = nullptr;
 		matEntry->GetEntry("Diffuse", &filename);
@@ -29,6 +28,7 @@ SkinnedNode::~SkinnedNode(void) {
 	delete anim;
 	delete mesh;
 	delete material;
+	delete shader;
 }
 
 void SkinnedNode::Update(float dt) {

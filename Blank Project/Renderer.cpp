@@ -183,15 +183,20 @@ void Renderer::DrawNode(SceneNode* node) {
 	if (node->GetMesh()) {
 		if (node->GetIsHeightMap() == 1) {
 			DrawTerrain(node);
+			node->Draw(*this);
+			return;
 		}
 		if (node->GetIsSkinned() == 1) {
 			DrawSkinned(node);
+			node->Draw(*this);
+			glDisable(GL_CULL_FACE);
+			return;
 		}
 		if (node->GetIsHeightMap() == 0 && node->GetIsSkinned() == 0) {
 			DrawPlanets(node);
+			node->Draw(*this);
+			return;
 		}
-		// draw node
-		node->Draw(*this);
 	}
 }
 
@@ -217,7 +222,7 @@ void Renderer::DrawTerrain(SceneNode* node) {
 	BindShader(node->GetShader());
 	UpdateShaderMatrices();
 
-	// gett world transform of vertices not local transform
+	// get world transform of vertices not local transform
 	Matrix4 model = node->GetWorldTransform() * Matrix4::Scale(node->GetModelScale());
 	glUniformMatrix4fv(glGetUniformLocation(node->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
 
@@ -242,7 +247,7 @@ void Renderer::DrawPlanets(SceneNode* node) {
 	BindShader(node->GetShader());
 	UpdateShaderMatrices();
 
-	// gett world transform of vertices not local transform
+	// get world transform of vertices not local transform
 	Matrix4 model = node->GetWorldTransform() * Matrix4::Scale(node->GetModelScale());
 	glUniformMatrix4fv(glGetUniformLocation(node->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
 
@@ -265,16 +270,13 @@ void Renderer::DrawPlanets(SceneNode* node) {
 }
 
 void Renderer::DrawSkinned(SceneNode* node) {
-	// for skinned mesh
 	glEnable(GL_CULL_FACE);
 
 	BindShader(node->GetShader());
 	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "diffuseTex"), 0);
 
+	modelMatrix = modelMatrix * Matrix4::Rotation(90, Vector3(-1,0,0)) * Matrix4::Scale(node->GetModelScale()) * node->GetWorldTransform();
 	UpdateShaderMatrices();
-
-	node->Draw(*this);
-	glDisable(GL_CULL_FACE);
 }
 
 void Renderer::DrawWater(){
@@ -293,6 +295,7 @@ void Renderer::DrawWater(){
 
 	// matrix will now be in center of height map, stretches it across the hieghtmap, and rotates it
 	modelMatrix = Matrix4::Translation(heightMapSize * 0.5f) * Matrix4::Scale(heightMapSize * 0.5f) * Matrix4::Rotation(90, Vector3(1, 0, 0));
+	
 	textureMatrix = Matrix4::Translation(Vector3(waterNode->GetWaterCycle(), 0.0f, waterNode->GetWaterCycle())) *
 					Matrix4::Scale(Vector3(10, 10, 10)) * Matrix4::Rotation(90, Vector3(0, 0, 1));
 	UpdateShaderMatrices();
