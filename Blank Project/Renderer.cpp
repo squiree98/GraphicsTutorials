@@ -10,6 +10,8 @@
 
 #include <algorithm>
 
+int SHADOWSIZE = 2048;
+
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// set meshes up
 	HeightMap* heightMap = new HeightMap(TEXTUREDIR"noise.png");
@@ -38,15 +40,32 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// set shaders up
 	terrainShader =  new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
-	planetShader =   new Shader("BumpVertex.glsl", "BumpFragment.glsl");
+	planetShader =   new Shader("ShadowSceneVertex.glsl", "ShadowSceneFragment.glsl");
 	waterShader =	 new Shader("ReflectVertex.glsl", "ReflectFragment.glsl");
 	skyBoxShader =   new Shader("SkyBoxVertex.glsl", "SkyBoxFragment.glsl");
-	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess())
+	shadowShader =	 new Shader("ShadowVertex.glsl", "ShadowFragment.glsl");
+	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess() || !shadowShader->LoadSuccess())
 		return;
+
+	// set shadow texture up
+	glGenTextures(1, &shadowTex);
+	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	// set shadow FBO up and attatch shadow texture
+	glGenFramebuffers(1, &shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTex, 0);
+	glDrawBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 	// set scene nodes up
 	root = new SceneNode();
-	terrainNode =		new TerrainNode(heightMap, planetTexture, rockTexture, terrainShader);
+	terrainNode =		new TerrainNode(heightMap, planetTexture, rockTexture, planetShader);
 	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(50,50,50), Vector3(3000,1000,3000));
 	planetNodeMoon =	new PlanetNode (sphere, rockTexture, planetShader, Vector3(20, 20, 20), Vector3(100, 0, 0));
 	waterNode =			new WaterNode(quad, waterTexture, waterShader, terrainNode->GetModelScale());
@@ -92,7 +111,6 @@ Renderer::~Renderer(void) {
 
 void Renderer::UpdateScene(float dt) {
 	camera->UpdateCamera(dt);
-	viewMatrix = camera->BuildViewMatrix();
 	waterNode->SetWaterRotate(dt, 2.0f);
 	waterNode->SetWaterRotate(dt, 0.25f);
 
@@ -106,7 +124,11 @@ void Renderer::RenderScene() {
 
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
+	DrawShadowScene();
+
 	DrawSkyBox();
+
+	viewMatrix = camera->BuildViewMatrix();
 
 	DrawNodes();
 
@@ -220,6 +242,10 @@ void Renderer::DrawPlanets(SceneNode* node) {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, bumpMap);
 
+	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "shadowTex"), 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, shadowTex);
+
 	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 
 	SetShaderLight(*light);
@@ -245,4 +271,42 @@ void Renderer::DrawWater(){
 					Matrix4::Scale(Vector3(10, 10, 10)) * Matrix4::Rotation(90, Vector3(0, 0, 1));
 	UpdateShaderMatrices();
 	quad->Draw();
+}
+
+// methods for shadowing
+
+void Renderer::DrawShadowScene() {
+	// set up gl for shadow map
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+	// generate shadow map
+	BindShader(shadowShader);
+	viewMatrix = Matrix4::BuildViewMatrix(light->GetPosition(), Vector3(0, 0, 0));
+	projMatrix = Matrix4::Perspective(1, 100, 1, 45);
+	shadowMatrix = projMatrix * viewMatrix;
+	// draw nodes
+	DrawShadowNodes();
+
+	// undo above changes to set up gl for object generation
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glViewport(0, 0, width, height);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::DrawShadowNodes() {
+	for (const auto& i : nodeList) {
+		DrawShadowNode(i);
+	}
+	for (const auto& i : transparentNodeList) {
+		DrawShadowNode(i);
+	}
+}
+
+void Renderer::DrawShadowNode(SceneNode* node) {
+	modelMatrix = node->GetWorldTransform() * Matrix4::Scale(node->GetModelScale());
+	UpdateShaderMatrices();
+	node->Draw(*this);
 }

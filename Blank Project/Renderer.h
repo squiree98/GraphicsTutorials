@@ -20,20 +20,23 @@ public:
 	void	UpdateScene(float dt)	override;
 	void	RenderScene()			override;
 
+private:
 	// methods for scene hierarchy
 	void BuildNodeLists(SceneNode* from);
 	void SortNodeLists();
 	void ClearNodeLists();
 	void DrawNodes();
+	void DrawShadowNodes();
 	void DrawNode(SceneNode* node);
+	void DrawShadowNode(SceneNode* node);
 
 	// methods used to draw terrain
 	void DrawSkyBox();
+	void DrawShadowScene();
 	void DrawTerrain(SceneNode* node);
 	void DrawPlanets(SceneNode* node);
 	void DrawWater();
 
-private:
 	// height map and size of heightmap
 	HeightMap* heightMap;
 	Vector3 heightMapSize;
@@ -50,8 +53,9 @@ private:
 	Shader* planetShader;
 	Shader* waterShader;
 	Shader* skyBoxShader;
+	Shader* shadowShader;
 
-	// textures + bump maps = cube map
+	// textures + bump maps + cube map + shadow maps
 	GLuint cubeMap;
 	GLuint planetTexture;
 	GLuint rockTexture;
@@ -59,6 +63,9 @@ private:
 	GLuint waterTexture;
 
 	GLuint bumpMap;
+
+	GLuint shadowFBO;
+	GLuint shadowTex;
 
 	// variables for scene hierarchy
 	SceneNode* root;

@@ -14,10 +14,10 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera->SetPosition(Vector3(0, 30, 175));
 
 	root_1 = new SceneNode();
-	root_1->AddChild(new CubeRobot(cube, Vector3(0, 0, 0)));
+	root_1->AddChild(new CubeRobot(cube));
 
 	root_2 = new SceneNode();
-	root_2->AddChild(new CubeRobot(cube, Vector3(100, 0, 0)));
+	root_2->AddChild(new CubeRobot(cube));
 
 	glEnable(GL_DEPTH_TEST);
 	init = true;
