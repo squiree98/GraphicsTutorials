@@ -17,11 +17,15 @@ int SHADOWSIZE = 2048;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// set meshes up
+	// height map for terrain
 	HeightMap* heightMap = new HeightMap(TEXTUREDIR"noise.png");
 	heightMapSize = heightMap->GetHeightMapSize();
+
+	// sphere and quad for water, cubemap, and planets
 	Mesh* sphere = Mesh::LoadFromMeshFile("Sphere.msh");
 	quad = Mesh::GenerateQuad();
-	// set up skinned mesh data
+
+	// load skinned mesh data
 	Mesh* skinnedMesh = Mesh::LoadFromMeshFile("Role_T.msh");
 	MeshAnimation* anim = new MeshAnimation("Role_T.anm");
 	MeshMaterial* material = new MeshMaterial("Role_T.mat");
@@ -36,7 +40,6 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 												TEXTUREDIR"top.png",		TEXTUREDIR"bottom.png",
 												TEXTUREDIR"front.png",	TEXTUREDIR"back.png",
 												SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
-	
 	if (!rockTexture || !planetTexture || !redPlanetTexture || !waterTexture || !cubeMap || !bumpMap)
 		return;
 	SetTextureRepeating(rockTexture, true);
@@ -77,15 +80,15 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(50,50,50), Vector3(3000,1000,3000));
 	planetNodeMoon =	new PlanetNode (sphere, rockTexture, planetShader, Vector3(20, 20, 20), Vector3(100, 0, 0));
 	waterNode =			new WaterNode(quad, waterTexture, waterShader, terrainNode->GetModelScale());
-	skinnedNode =		new SkinnedNode(skinnedMesh, anim, material, skinnedMeshShader);
+	skinnedNode =		new SkinnedNode(skinnedMesh, anim, material, skinnedMeshShader, Vector3(0.5f, 1.0f, 0.5f) * heightMapSize);
 	root->AddChild(terrainNode);
 	terrainNode->AddChild(planetNode);
-	terrainNode->AddChild(skinnedNode);
 	planetNode->AddChild(planetNodeMoon);
+	terrainNode->AddChild(skinnedNode);
 
 	// draw water node seperate as it must be drawn last
 	// set the camera and lighting up
-	camera = new Camera(-45.0f, 0.0f, Vector3(0.5f, 1.5f, 0.5f) * heightMapSize);
+	camera = new Camera(0.0f, 0.0f, Vector3(0.5f, 1.5f, 0.5f) * heightMapSize);
 	light = new Light(heightMapSize * Vector3(0.8f, 10.0f, 0.8f), Vector4(1, 1, 1, 1), heightMapSize.x * 2);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
@@ -187,6 +190,7 @@ void Renderer::DrawNode(SceneNode* node) {
 			return;
 		}
 		if (node->GetIsSkinned() == 1) {
+			glEnable(GL_CULL_FACE);
 			DrawSkinned(node);
 			node->Draw(*this);
 			glDisable(GL_CULL_FACE);
@@ -270,13 +274,13 @@ void Renderer::DrawPlanets(SceneNode* node) {
 }
 
 void Renderer::DrawSkinned(SceneNode* node) {
-	glEnable(GL_CULL_FACE);
-
 	BindShader(node->GetShader());
 	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "diffuseTex"), 0);
 
-	modelMatrix = modelMatrix * Matrix4::Rotation(90, Vector3(-1,0,0)) * Matrix4::Scale(node->GetModelScale()) * node->GetWorldTransform();
+	//modelMatrix = modelMatrix * Matrix4::Rotation(90, Vector3(-1,0,0)) * Matrix4::Scale(node->GetModelScale()) * node->GetWorldTransform();
 	UpdateShaderMatrices();
+	Matrix4 model = node->GetWorldTransform() * Matrix4::Scale(node->GetModelScale());
+	glUniformMatrix4fv(glGetUniformLocation(node->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
 }
 
 void Renderer::DrawWater(){
@@ -294,12 +298,16 @@ void Renderer::DrawWater(){
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
 
 	// matrix will now be in center of height map, stretches it across the hieghtmap, and rotates it
-	modelMatrix = Matrix4::Translation(heightMapSize * 0.5f) * Matrix4::Scale(heightMapSize * 0.5f) * Matrix4::Rotation(90, Vector3(1, 0, 0));
-	
+	//modelMatrix = Matrix4::Translation(heightMapSize * 0.5f) * Matrix4::Scale(heightMapSize * 0.5f) * Matrix4::Rotation(90, Vector3(1, 0, 0));
+
 	textureMatrix = Matrix4::Translation(Vector3(waterNode->GetWaterCycle(), 0.0f, waterNode->GetWaterCycle())) *
-					Matrix4::Scale(Vector3(10, 10, 10)) * Matrix4::Rotation(90, Vector3(0, 0, 1));
+		Matrix4::Scale(Vector3(10, 10, 10)) * Matrix4::Rotation(90, Vector3(0, 0, 1));
 	UpdateShaderMatrices();
+	Matrix4 model = Matrix4::Translation(heightMapSize * 0.5f) * Matrix4::Scale(heightMapSize * 0.5f) * Matrix4::Rotation(90, Vector3(1, 0, 0));
+	glUniformMatrix4fv(glGetUniformLocation(waterNode->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
 	quad->Draw();
+
+	//modelMatrix.ToIdentity();
 }
 
 // methods for shadowing

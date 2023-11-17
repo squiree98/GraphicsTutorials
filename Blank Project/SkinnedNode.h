@@ -7,7 +7,7 @@
 class SkinnedNode : public SceneNode
 {
 public:
-	SkinnedNode(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material, Shader* shader);
+	SkinnedNode(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material, Shader* shader, Vector3 transform);
 	~SkinnedNode(void);
 
 	void Update(float dt)			override;
@@ -20,5 +20,7 @@ protected:
 
 	int currentFrame;
 	float frameTime;
+
+	int framesWalking;
 };
 

@@ -1,14 +1,14 @@
 #include "SkinnedNode.h"
 
-SkinnedNode::SkinnedNode(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material, Shader* shader) {
+SkinnedNode::SkinnedNode(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material, Shader* shader, Vector3 transform) {
 	this->mesh = mesh;
 	this->anim = anim;
 	this->material = material;
 	this->shader = shader;
 	this->isSkinned = 1;
 	this->isHeightMap = 0;
-	this->modelScale = Vector3(0.02f, 0.3f, 0.02f);
-	this->transform = Matrix4::Translation(Vector3(0, 5, 0));
+	this->modelScale = Vector3(45, 45, 45);
+	this->transform = Matrix4::Translation(transform);
 
 	// for every submesh get its respective texture
 	for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
@@ -22,6 +22,7 @@ SkinnedNode::SkinnedNode(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material
 
 	currentFrame = 0;
 	frameTime = 0.0f;
+	framesWalking = 0;
 }
 
 SkinnedNode::~SkinnedNode(void) {
@@ -36,7 +37,14 @@ void SkinnedNode::Update(float dt) {
 	while (frameTime < 0.0f) {
 		currentFrame = (currentFrame + 1) % anim->GetFrameCount();
 		frameTime += 1.0f / anim->GetFrameRate();
+		framesWalking += 1;
 	}
+	std::cout << framesWalking << std::endl;
+	if (this->framesWalking > 100) {
+		this->transform = this->transform * Matrix4::Rotation(90, Vector3(0, 1, 0));
+		this->framesWalking = 0;
+	}
+	this->transform = this->transform * Matrix4::Translation(Vector3(0,0,1));
 
 	SceneNode::Update(dt);
 }
