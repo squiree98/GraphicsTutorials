@@ -9,7 +9,7 @@ WaterNode::WaterNode(Mesh* mesh, GLuint texture, Shader* shader, Vector3 scale) 
 	this->boundingRadius = 50.0f;
 	this->distanceFromCamera = 0.0f;
 	this->texture = texture;
-	this->transform = Matrix4::Translation(Vector3(0,0,0));
+	this->transform = Matrix4::Translation(Vector3(0,-20,0));
 	this->isHeightMap = 0;
 	this->isSkinned = 0;
 	waterRotate = 0.0f;

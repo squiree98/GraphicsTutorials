@@ -1,6 +1,6 @@
 #include "Renderer.h"
 
-const int POST_PASSES = 1;
+const int POST_PASSES = 10;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera = new Camera(-25.0f, 225.0f, Vector3(-150.0f, 250.0f, -150.0f));
@@ -88,6 +88,9 @@ void Renderer::DrawScene() {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, heightTexture);
 	heightMap->Draw();
+
+	Mesh* mesh = Mesh::LoadFromMeshFile("Cube.msh");
+	mesh->Draw();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -97,7 +100,7 @@ void Renderer::DrawPostProcess() {
 	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
 	// attatch bufferColourTex[1] to processFBO
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[1], 0);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	BindShader(processShader);
 	modelMatrix.ToIdentity();

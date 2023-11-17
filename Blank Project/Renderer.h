@@ -39,6 +39,10 @@ private:
 	void DrawSkinned(SceneNode* node);
 	void DrawWater();
 
+	// post processing methods
+	void DrawPostProcess();
+	void PresentScreen();
+
 	// height map and size of heightmap
 	HeightMap* heightMap;
 	Vector3 heightMapSize;
@@ -46,6 +50,8 @@ private:
 	Camera* camera;
 
 	Mesh* quad;
+	Mesh* skyBoxQuad;
+	Mesh* waterQuad;
 
 	// lighting
 	Light* light;
@@ -57,16 +63,22 @@ private:
 	Shader* skyBoxShader;
 	Shader* shadowShader;
 	Shader* skinnedMeshShader;
+	Shader* sceneShader;
+	Shader* processShader;
 
-	// textures + bump maps + cube map + shadow maps
+	// textures + bump maps + cube map
 	GLuint cubeMap;
 	GLuint planetTexture;
 	GLuint rockTexture;
 	GLuint redPlanetTexture;
 	GLuint waterTexture;
-
 	GLuint bumpMap;
-
+	// post processing
+	GLuint bufferFBO;
+	GLuint processFBO;
+	GLuint bufferColourTex[2];
+	GLuint bufferDepthTex;
+	// shadow mapping
 	GLuint shadowFBO;
 	GLuint shadowTex;
 

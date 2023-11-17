@@ -13,17 +13,20 @@
 
 #include <algorithm>
 
-int SHADOWSIZE = 2048;
+const int SHADOWSIZE = 2048;
+const int POSTPASSES = 10;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// set meshes up
 	// height map for terrain
-	HeightMap* heightMap = new HeightMap(TEXTUREDIR"noise.png");
+	heightMap = new HeightMap(TEXTUREDIR"noise.png");
 	heightMapSize = heightMap->GetHeightMapSize();
 
 	// sphere and quad for water, cubemap, and planets
 	Mesh* sphere = Mesh::LoadFromMeshFile("Sphere.msh");
 	Mesh* cube	 = Mesh::LoadFromMeshFile("Cube.msh");
+	waterQuad = Mesh::GenerateQuad();
+	skyBoxQuad = Mesh::GenerateQuad();
 	quad = Mesh::GenerateQuad();
 
 	// load skinned mesh data
@@ -56,7 +59,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	skyBoxShader =		new Shader("SkyBoxVertex.glsl", "SkyBoxFragment.glsl");
 	shadowShader =		new Shader("ShadowVertex.glsl", "ShadowFragment.glsl");
 	skinnedMeshShader = new Shader("SkinningVertex.glsl", "TexturedFragment.glsl");
-	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess() || !shadowShader->LoadSuccess() || !skinnedMeshShader->LoadSuccess())
+	processShader =		new Shader("TexturedVertex.glsl", "ProcessFragment.glsl");
+	sceneShader =		new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
+	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess() || !shadowShader->LoadSuccess() || !skinnedMeshShader->LoadSuccess() || !processShader->LoadSuccess() || !sceneShader->LoadSuccess())
 		return;
 
 	// set shadow texture up
@@ -74,6 +79,36 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	// set post processing up
+	// get texture for buffer
+	glGenTextures	(1, &bufferDepthTex);
+	glBindTexture	(GL_TEXTURE_2D, bufferDepthTex);
+	glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D	(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+	for (int i = 0; i < 2; i++) {
+		glGenTextures	(1, &bufferColourTex[i]);
+		glBindTexture	(GL_TEXTURE_2D, bufferColourTex[i]);
+		glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+		glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexImage2D	(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	}
+	// set buffer up
+	glGenFramebuffers(1, &bufferFBO); // render scene here
+	glGenFramebuffers(1, &processFBO);// post processing here
+
+	// bind and attatch textures
+	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, bufferDepthTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, bufferDepthTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[0], 0);
+	// check success
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !bufferDepthTex || !bufferColourTex[0])
+		return;
 
 	// set scene nodes up
 	root = new SceneNode();
@@ -81,7 +116,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(50,50,50), Vector3(3000,1000,3000), true);
 	planetNodeMoon =	new PlanetNode (sphere, rockTexture, planetShader, Vector3(20, 20, 20), Vector3(100, 0, 0), true);
 	cubeNode =			new PlanetNode(cube, rockTexture, planetShader, Vector3(500, 300, 500), Vector3(0.3f, 0.5f, 0.3f) * heightMapSize, false);
-	waterNode =			new WaterNode(quad, waterTexture, waterShader, terrainNode->GetModelScale());
+	waterNode =			new WaterNode(waterQuad, waterTexture, waterShader, terrainNode->GetModelScale());
 	skinnedNode =		new SkinnedNode(skinnedMesh, anim, material, skinnedMeshShader, Vector3(-50, 150, 100));
 	root->AddChild(terrainNode);
 	terrainNode->AddChild(planetNode);
@@ -91,9 +126,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// draw water node seperate as it must be drawn last
 	// set the camera and lighting up
-	camera = new Camera(0.0f, 0.0f, Vector3(0.5f, 1.5f, 0.5f) * heightMapSize);
+	camera = new Camera(0.0f, 45.0f, Vector3(0.5f, 1.5f, 0.5f) * heightMapSize);
 	light = new Light(heightMapSize * Vector3(0.8f, 10.0f, 0.8f), Vector4(1, 1, 1, 1), heightMapSize.x * 2);
-	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
 	// turn depth test on and start rendering
 	glEnable(GL_DEPTH_TEST);
@@ -102,6 +136,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	// allows us to sample linearly between cube map faces
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	init = true;
 }
 
@@ -127,8 +162,11 @@ Renderer::~Renderer(void) {
 
 void Renderer::UpdateScene(float dt) {
 	camera->UpdateCamera(dt);
+	viewMatrix = camera->BuildViewMatrix();
+	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
+
 	waterNode->SetWaterRotate(dt, 2.0f);
-	waterNode->SetWaterRotate(dt, 0.25f);
+	waterNode->SetWaterCycle(dt, 0.25f);
 
 	root->Update(dt);
 }
@@ -138,19 +176,24 @@ void Renderer::RenderScene() {
 	BuildNodeLists(root);
 	SortNodeLists();
 
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	// DrawShadowScene();
 
-	//DrawShadowScene();
+	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	DrawSkyBox();
-
-	viewMatrix = camera->BuildViewMatrix();
 
 	DrawNodes();
 
 	DrawWater();
 
 	ClearNodeLists();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	DrawPostProcess();
+
+	PresentScreen();
 }
 
 // methods for scene hierarchy
@@ -220,7 +263,7 @@ void Renderer::DrawSkyBox() {
 	BindShader(skyBoxShader);
 	UpdateShaderMatrices();
 
-	quad->Draw();
+	skyBoxQuad->Draw();
 
 	glDepthMask(GL_TRUE);
 }
@@ -267,9 +310,9 @@ void Renderer::DrawPlanets(SceneNode* node) {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, bumpMap);
 
-	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "shadowTex"), 2);
+	/*glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "shadowTex"), 2);
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	glBindTexture(GL_TEXTURE_2D, shadowTex);*/
 
 	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 
@@ -303,14 +346,13 @@ void Renderer::DrawWater(){
 	// matrix will now be in center of height map, stretches it across the hieghtmap, and rotates it
 	//modelMatrix = Matrix4::Translation(heightMapSize * 0.5f) * Matrix4::Scale(heightMapSize * 0.5f) * Matrix4::Rotation(90, Vector3(1, 0, 0));
 
-	textureMatrix = Matrix4::Translation(Vector3(waterNode->GetWaterCycle(), 0.0f, waterNode->GetWaterCycle())) *
-		Matrix4::Scale(Vector3(10, 10, 10)) * Matrix4::Rotation(90, Vector3(0, 0, 1));
+	textureMatrix = Matrix4::Translation(Vector3(waterNode->GetWaterCycle(), 0.0f, waterNode->GetWaterCycle())) * Matrix4::Scale(Vector3(10, 10, 10)) * Matrix4::Rotation(90, Vector3(0, 0, 1));
 	UpdateShaderMatrices();
-	Matrix4 model = Matrix4::Translation(heightMapSize * 0.5f) * Matrix4::Scale(heightMapSize * 0.5f) * Matrix4::Rotation(90, Vector3(1, 0, 0));
+	Matrix4 model = Matrix4::Translation(heightMapSize * 0.5f) * waterNode->GetTransform() * Matrix4::Scale(heightMapSize * 0.5f) * Matrix4::Rotation(90, Vector3(1, 0, 0));
 	glUniformMatrix4fv(glGetUniformLocation(waterNode->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
-	quad->Draw();
+	waterQuad->Draw();
 
-	//modelMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
 }
 
 // methods for shadowing
@@ -349,4 +391,52 @@ void Renderer::DrawShadowNode(SceneNode* node) {
 	modelMatrix = node->GetWorldTransform() * Matrix4::Scale(node->GetModelScale());
 	UpdateShaderMatrices();
 	node->Draw(*this);
+}
+
+// methods for post processing
+
+void Renderer::DrawPostProcess() {
+	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[1], 0);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+	BindShader(processShader);
+	modelMatrix.ToIdentity();
+	viewMatrix.ToIdentity();
+	projMatrix.ToIdentity();
+	UpdateShaderMatrices();
+
+	glDisable(GL_DEPTH_TEST);
+
+	// apply post processing
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(glGetUniformLocation(processShader->GetProgram(), "sceneTex"), 0);
+	for (int i = 0; i < POSTPASSES; i++) {
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[1], 0);
+		glUniform1i(glGetUniformLocation(processShader->GetProgram(), "isVertical"), 0);
+		glBindTexture(GL_TEXTURE_2D, bufferColourTex[0]);
+		quad->Draw();
+		// swap colour buffers for second blur
+		glUniform1i(glGetUniformLocation(processShader->GetProgram(), "isVertical"), 1);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[0],0);
+		glBindTexture(GL_TEXTURE_2D, bufferColourTex[1]);
+		quad->Draw();
+	}
+	glEnable(GL_DEPTH_TEST);
+}
+
+void Renderer::PresentScreen() {
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	BindShader(sceneShader);
+
+	modelMatrix.ToIdentity();
+	viewMatrix.ToIdentity();
+	projMatrix.ToIdentity();
+	UpdateShaderMatrices();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, bufferColourTex[0]);
+	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "diffuseTex"), 0);
+	quad->Draw();
 }
