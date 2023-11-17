@@ -39,8 +39,7 @@ void SkinnedNode::Update(float dt) {
 		frameTime += 1.0f / anim->GetFrameRate();
 		framesWalking += 1;
 	}
-	std::cout << framesWalking << std::endl;
-	if (this->framesWalking > 100) {
+	if (this->framesWalking > 20) {
 		this->transform = this->transform * Matrix4::Rotation(90, Vector3(0, 1, 0));
 		this->framesWalking = 0;
 	}

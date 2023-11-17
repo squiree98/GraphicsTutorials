@@ -75,6 +75,7 @@ private:
 	TerrainNode* terrainNode;
 	PlanetNode* planetNode;
 	PlanetNode* planetNodeMoon;
+	PlanetNode* cubeNode;
 	WaterNode* waterNode;
 	SkinnedNode* skinnedNode;
 

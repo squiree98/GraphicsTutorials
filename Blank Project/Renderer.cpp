@@ -23,6 +23,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// sphere and quad for water, cubemap, and planets
 	Mesh* sphere = Mesh::LoadFromMeshFile("Sphere.msh");
+	Mesh* cube	 = Mesh::LoadFromMeshFile("Cube.msh");
 	quad = Mesh::GenerateQuad();
 
 	// load skinned mesh data
@@ -77,14 +78,16 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// set scene nodes up
 	root = new SceneNode();
 	terrainNode =		new TerrainNode(heightMap, planetTexture, rockTexture, terrainShader);
-	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(50,50,50), Vector3(3000,1000,3000));
-	planetNodeMoon =	new PlanetNode (sphere, rockTexture, planetShader, Vector3(20, 20, 20), Vector3(100, 0, 0));
+	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(50,50,50), Vector3(3000,1000,3000), true);
+	planetNodeMoon =	new PlanetNode (sphere, rockTexture, planetShader, Vector3(20, 20, 20), Vector3(100, 0, 0), true);
+	cubeNode =			new PlanetNode(cube, rockTexture, planetShader, Vector3(500, 300, 500), Vector3(0.3f, 0.5f, 0.3f) * heightMapSize, false);
 	waterNode =			new WaterNode(quad, waterTexture, waterShader, terrainNode->GetModelScale());
-	skinnedNode =		new SkinnedNode(skinnedMesh, anim, material, skinnedMeshShader, Vector3(0.5f, 1.0f, 0.5f) * heightMapSize);
+	skinnedNode =		new SkinnedNode(skinnedMesh, anim, material, skinnedMeshShader, Vector3(-50, 150, 100));
 	root->AddChild(terrainNode);
 	terrainNode->AddChild(planetNode);
+	terrainNode->AddChild(cubeNode);
+	cubeNode->AddChild(skinnedNode);
 	planetNode->AddChild(planetNodeMoon);
-	terrainNode->AddChild(skinnedNode);
 
 	// draw water node seperate as it must be drawn last
 	// set the camera and lighting up

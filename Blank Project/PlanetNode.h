@@ -5,7 +5,7 @@
 class PlanetNode : public SceneNode
 {
 public:
-	PlanetNode(Mesh* mesh, GLuint texture, Shader* newShader, Vector3 scale, Vector3 transform);
+	PlanetNode(Mesh* mesh, GLuint texture, Shader* newShader, Vector3 scale, Vector3 transform, bool spin);
 	~PlanetNode(void);
 
 	void	Update(float dt)			override;
@@ -15,5 +15,6 @@ public:
 	GLuint	GetRockTexture()			override { return NULL; }
 
 protected:
+	bool spin;
 };
 
