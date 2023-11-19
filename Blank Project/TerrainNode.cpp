@@ -13,7 +13,7 @@ TerrainNode::TerrainNode(HeightMap* heightMap, GLuint givenPlanetTexture, GLuint
 	this->isHeightMap = 1;
 	this->isSkinned = 0;
 	// shouldn't be used but if needed
-	this->texture = givenPlanetTexture;
+	this->texture = givenRockTexture;
 }
 
 TerrainNode::~TerrainNode(void) {

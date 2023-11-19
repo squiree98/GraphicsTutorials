@@ -110,17 +110,6 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !bufferDepthTex || !bufferColourTex[0])
 		return;
 
-	// temp
-	sceneMeshes.emplace_back(Mesh::GenerateQuad());
-	sceneMeshes.emplace_back(Mesh::LoadFromMeshFile("Sphere.msh"));
-	sceneMeshes.emplace_back(Mesh::LoadFromMeshFile("Cylinder.msh"));
-	sceneMeshes.emplace_back(Mesh::LoadFromMeshFile("Cone.msh"));
-	// store meshes model matrices here
-	sceneTransforms.resize(4);
-	// set model matrix for terrain as it wont move
-	sceneTransforms[0] = Matrix4::Rotation(90, Vector3(1, 0, 0)) * Matrix4::Scale(Vector3(10, 10, 1));
-	sceneTime = 0.0f;
-
 	// set scene nodes up
 	root = new SceneNode();
 	terrainNode =		new TerrainNode(heightMap, planetTexture, rockTexture, terrainShader);
@@ -132,17 +121,13 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	root->AddChild(terrainNode);
 	terrainNode->AddChild(planetNode);
 	terrainNode->AddChild(cubeNode);
-	//cubeNode->AddChild(skinnedNode);
+	cubeNode->AddChild(skinnedNode);
 	planetNode->AddChild(planetNodeMoon);
 
-	Vector3 temp = Vector3(1, 2, 1) * heightMapSize;
-	// draw water node seperate as it must be drawn last
 	// set the camera and lighting up
-	camera = new Camera(0.0f, 45.0f, temp);
-	//camera = new Camera(-30.0f, 315.0f, Vector3(-8.0f, 5.0f, 8.0f));
+	camera = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
 	freeMovement = true;
-	light = new Light(temp, Vector4(1, 1, 1, 1), heightMapSize.x * 2);
-	//light = new Light(Vector3(-20.0f, 10.0f, -20.0f), Vector4(1, 1, 1, 1), 250.0f);
+	light = new Light(Vector3(0, 5, 0) * heightMapSize, Vector4(1, 1, 1, 1), heightMapSize.x * 5);
 
 	// turn depth test on and start rendering
 	glEnable(GL_DEPTH_TEST);
@@ -177,15 +162,8 @@ Renderer::~Renderer(void) {
 
 void Renderer::UpdateScene(float dt) {
 	camera->UpdateCamera(dt);
-	sceneTime += dt;
 	viewMatrix = camera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
-
-	for (int i = 1; i < 4; i++)
-	{
-		Vector3 t = Vector3(-10 + (5 * i), 2.0f + sin(sceneTime * i), 0);
-		sceneTransforms[i] = Matrix4::Translation(t) * Matrix4::Rotation(sceneTime * 10 * i, Vector3(1, 0, 0));
-	}
 
 	waterNode->SetWaterRotate(dt, 2.0f);
 	waterNode->SetWaterCycle(dt, 0.25f);
@@ -203,17 +181,15 @@ void Renderer::RenderScene() {
 
 	DrawSkyBox();
 
-	// DrawShadowScene();
+	DrawShadowScene();
 
 	// rebuild view and projection matrix for main scene
 	viewMatrix = camera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
-	//DrawScene();
-
 	DrawNodes();
 
-	//DrawWater();
+	DrawWater();
 
 	ClearNodeLists();
 
@@ -222,38 +198,6 @@ void Renderer::RenderScene() {
 	DrawPostProcess();
 
 	PresentScreen();
-}
-
-// temp
-void Renderer::DrawScene() {
-	BindShader(planetShader);
-	SetShaderLight(*light);
-	// set up view matrix to be back in cameras viewpoint not lights
-	viewMatrix = camera->BuildViewMatrix();
-	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
-
-	// set uniforms for shaders
-	glUniform1i(glGetUniformLocation(planetShader->GetProgram(), "diffuseTex"), 0);
-	glUniform1i(glGetUniformLocation(planetShader->GetProgram(), "bumpTex"), 1);
-	glUniform1i(glGetUniformLocation(planetShader->GetProgram(), "shadowTex"), 2);
-
-	glUniform3fv(glGetUniformLocation(planetShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, rockTexture);
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, bumpMap);
-
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);
-
-	for (int i = 0; i < 4; i++)
-	{
-		modelMatrix = sceneTransforms[i];
-		UpdateShaderMatrices();
-		sceneMeshes[i]->Draw();
-	}
 }
 
 // methods for scene hierarchy
@@ -336,19 +280,23 @@ void Renderer::DrawTerrain(SceneNode* node) {
 	Matrix4 model = node->GetWorldTransform() * Matrix4::Scale(node->GetModelScale());
 	glUniformMatrix4fv(glGetUniformLocation(node->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
 
-	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
-
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, node->GetRockTexture());
 	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "rockTex"), 0);
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, node->GetPlanetTexture());
-	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "grassTex"), 1);
+	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "planetTex"), 1);
 
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, bumpMap);
 	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "bumpTex"), 2);
+
+	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "shadowTex"), 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, shadowTex);
+
+	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 
 	SetShaderLight(*light);
 }
@@ -370,9 +318,9 @@ void Renderer::DrawPlanets(SceneNode* node) {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, bumpMap);
 
-	/*glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "shadowTex"), 2);
+	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "shadowTex"), 2);
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);*/
+	glBindTexture(GL_TEXTURE_2D, shadowTex);
 
 	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 
@@ -383,7 +331,6 @@ void Renderer::DrawSkinned(SceneNode* node) {
 	BindShader(node->GetShader());
 	glUniform1i(glGetUniformLocation(node->GetShader()->GetProgram(), "diffuseTex"), 0);
 
-	//modelMatrix = modelMatrix * Matrix4::Rotation(90, Vector3(-1,0,0)) * Matrix4::Scale(node->GetModelScale()) * node->GetWorldTransform();
 	UpdateShaderMatrices();
 	Matrix4 model = node->GetWorldTransform() * Matrix4::Scale(node->GetModelScale());
 	glUniformMatrix4fv(glGetUniformLocation(node->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
@@ -426,17 +373,9 @@ void Renderer::DrawShadowScene() {
 
 	// generate shadow map
 	BindShader(shadowShader);
-	viewMatrix = Matrix4::BuildViewMatrix(light->GetPosition(), Vector3(0, 0, 0));
-	projMatrix = Matrix4::Perspective(1, 150000, 1, 45);
+	viewMatrix = Matrix4::BuildViewMatrix(light->GetPosition(), heightMapSize * Vector3(1, 0, 1));
+	projMatrix = Matrix4::Perspective(1, 150000, (float)width / (float)height, 45);
 	shadowMatrix = projMatrix * viewMatrix;
-
-	//// render shadow scene
-	//for (int i = 0; i < 4; i++)
-	//{
-	//	modelMatrix = sceneTransforms[i];
-	//	UpdateShaderMatrices();
-	//	sceneMeshes[i]->Draw();
-	//}
 
 	// draw nodes
 	DrawShadowNodes();

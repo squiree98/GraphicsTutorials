@@ -45,12 +45,6 @@ private:
 	void DrawPostProcess();
 	void PresentScreen();
 
-	// temp
-	void DrawScene();
-	vector<Mesh*> sceneMeshes;
-	vector<Matrix4> sceneTransforms;
-	float sceneTime;
-
 	// camera free movement
 	bool freeMovement;
 

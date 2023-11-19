@@ -1,65 +1,72 @@
 #version 330 core
 
+uniform sampler2D rockTex;
+uniform sampler2D planetTex;
+uniform sampler2D bumpTex;
+uniform sampler2D shadowTex;
+
 uniform vec3		cameraPos;
 uniform vec4		lightColour;
 uniform vec3		lightPos;
+
 uniform float		lightRadius;
 
-uniform sampler2D rockTex;
-uniform sampler2D grassTex;
-uniform sampler2D bumpTex;
-
 in Vertex {
-	vec4 colour;
+	vec3 colour;
 	vec2 texCoord;
 	vec3 normal;
 	vec3 normalizedNormal;
-    vec3 tangent;
+	vec3 tangent;
 	vec3 binormal;
 	vec3 worldPos;
-    float worldPosY;
+	vec4 shadowProj;
 } IN;
 
-out vec4 fragment;
+out vec4 fragColour;
 
 void main(void) {
-    // calculate incident light as well as the view direction and half direction
-    vec3 incident = normalize(lightPos  - IN.worldPos);
-    vec3 viewDir  = normalize(cameraPos - IN.worldPos);
-    vec3 halfDir  = normalize(incident  + viewDir);
+ // normal light shader
+	vec3 incident = normalize(lightPos - IN.worldPos);
+	vec3 viewDir = normalize (cameraPos - IN.worldPos);
+	vec3 halfDir = normalize (incident + viewDir);
 
-    mat3 TEN = mat3(normalize(IN.tangent), normalize(IN.binormal), normalize(IN.normal));
+	mat3 TBN = mat3(normalize(IN.tangent), normalize(IN.binormal), normalize(IN.normal));
 
-    // get the texture colours
-    float slope = 1-IN.normalizedNormal.y;
+	float slope = 1-IN.normalizedNormal.y;
 	vec4 diffuse;
     if (slope > 0.3f) {
         diffuse = texture(rockTex, IN.texCoord);
     }
     else {
-        diffuse = texture(grassTex, IN.texCoord);
+        diffuse = texture(planetTex, IN.texCoord);
     }
+	vec3 normal = texture (bumpTex,    IN.texCoord).rgb;
 
-    vec3 bumpNormal = texture(bumpTex, IN.texCoord).rgb;
-    bumpNormal = normalize(TEN * normalize(bumpNormal * 2.0 - 1.0));
+	normal = normalize(TBN * normal * 2.0 - 1.0);
 
-    // get lambert (amount of light hitting surface)
-	float lambert		= max(dot(incident, bumpNormal), 0.0f);
-	// get distance between light and fragment
-	float distance		= length(lightPos - IN.worldPos);
-	// get attenuation which is how intense the light is (further away means less intense)
-	float attenuation	= 1.0 - clamp(distance/lightRadius, 0.0, 1.0);
+	float lambert = max(dot(incident, normal), 0.0f);
+	float distance = length(lightPos - IN.worldPos);
+	float attenuation = 1.0f - clamp(distance / lightRadius, 0.0, 1.0);
 
-	// get the specularity of the light
-	// use half angle to find how close we are to a perfect reflection angle
-	float specFactor = clamp(dot(halfDir, bumpNormal), 0.0, 1.0);
-	// 60 is how shiny we want the surface to be
+	float specFactor = clamp(dot(halfDir, normal), 0.0, 1.0);
 	specFactor = pow(specFactor, 60.0);
 
-	// get final colour of the fragment
+	// new stuff
+	// 1 - no shadow while 0 = full shadow
+	float shadow = 1.0;
+
+	vec3 shadowNDC = IN.shadowProj.xyz / IN.shadowProj.w;
+	if (abs(shadowNDC.x) < 1.0f && abs(shadowNDC.y) < 1.0f && abs(shadowNDC.z) < 1.0f) {
+		vec3 biasCoord = shadowNDC * 0.5 + 0.5;
+		float shadowZ = texture(shadowTex, biasCoord.xy).x;
+		if (shadowZ < biasCoord.z) {
+			shadow = 0.0f;
+		}
+	}
 	vec3 surface = (diffuse.rgb * lightColour.rgb);
-	fragment.rgb = surface * lambert * attenuation;
-	fragment.rgb += (lightColour.rgb * specFactor) * attenuation * 0.33;
-	fragment.rgb += surface * 0.1f;
-	fragment.a = diffuse.a;
+	fragColour.rgb = surface * attenuation * lambert;
+	fragColour.rgb += (lightColour.rgb * attenuation * specFactor) * 0.33;
+	fragColour.rgb *= shadow;
+	fragColour.rgb += surface * 0.1f;
+	fragColour.a = diffuse.a;
 }
