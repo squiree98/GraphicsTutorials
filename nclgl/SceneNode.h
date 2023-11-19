@@ -31,6 +31,7 @@ public:
 
 	int				GetIsSkinned() const					{ return isSkinned; }
 	void			SetIsSkinned(int value)					{ isSkinned = value; }
+	virtual void	SwitchShadowSkinned()					{}
 	
 	std::vector<SceneNode*>::const_iterator GetChildIteratorStart() { return children.begin(); }
 

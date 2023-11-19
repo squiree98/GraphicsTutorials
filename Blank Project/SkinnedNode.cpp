@@ -9,6 +9,7 @@ SkinnedNode::SkinnedNode(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material
 	this->isHeightMap = 0;
 	this->modelScale = Vector3(45, 45, 45);
 	this->transform = Matrix4::Translation(transform);
+	this->isShadow = false;
 
 	// for every submesh get its respective texture
 	for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
@@ -57,9 +58,11 @@ void SkinnedNode::Draw(const OGLRenderer& r) {
 	for (unsigned int i = 0; i < mesh->GetJointCount(); i++) {
 		frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
 	}
-	int j = glGetUniformLocation(shader->GetProgram(), "joints");
-	glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
-
+	if(!isShadow) {
+		int j = glGetUniformLocation(shader->GetProgram(), "joints");
+		glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
+	}
+	
 	for (int i = 0; i < mesh->GetSubMeshCount(); i++)
 	{
 		glActiveTexture(GL_TEXTURE0);

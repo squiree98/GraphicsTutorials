@@ -399,7 +399,14 @@ void Renderer::DrawShadowNode(SceneNode* node) {
 	UpdateShaderMatrices();
 	Matrix4 model = node->GetWorldTransform() * Matrix4::Scale(node->GetModelScale());
 	glUniformMatrix4fv(glGetUniformLocation(shadowShader->GetProgram(), "modelMatrix"), 1, false, model.values);
-	node->Draw(*this);
+	if (node->GetIsSkinned()) {
+		node->SwitchShadowSkinned();
+		node->Draw(*this);
+		node->SwitchShadowSkinned();
+	}
+	else {
+		node->Draw(*this);
+	}
 }
 
 // methods for post processing

@@ -13,6 +13,8 @@ public:
 	void Update(float dt)			override;
 	void Draw(const OGLRenderer& r) override;
 
+	void SwitchShadowSkinned() override { this->isShadow = !isShadow; }
+
 protected:
 	MeshAnimation* anim;
 	MeshMaterial* material;
@@ -22,5 +24,7 @@ protected:
 	float frameTime;
 
 	int framesWalking;
+
+	bool isShadow;
 };
 
