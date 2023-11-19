@@ -38,6 +38,44 @@ void Camera::UpdateCamera(float dt) {
 		position.y -= speed;
 }
 
+void Camera::AutoUpdateCamera(float dt) {
+	// new scene
+	if (timePassed >= 10) {
+		sceneNumber++;
+		timePassed = 0;
+	}
+
+	pitch = std::min(pitch, 90.0f);
+	pitch = std::max(pitch, -90.0f);
+
+	if (yaw < 0)
+		yaw += 360.0f;
+	if (yaw > 360.0f)
+		yaw -= 360.0f;
+	switch (sceneNumber) {
+	case 1:
+		ViewSkinnedMesh(dt);
+	}
+
+	timePassed += dt;
+}
+
+void Camera::ViewSkinnedMesh(float dt) {
+	Matrix4 rotation = Matrix4::Rotation(yaw, Vector3(0, 0, 0));
+
+	// -1 because in OpenGL forward as -z
+	Vector3 forward = rotation * Vector3(0, 0, -1);
+	Vector3 right = rotation * Vector3(1, 0, 0);
+
+	float speed = 100.0f * dt;
+
+	position += forward * speed;
+
+	yaw += 0.01f;
+
+	std::cout << timePassed << std::endl;
+}
+
 Matrix4 Camera::BuildViewMatrix() {
 	return 
 		Matrix4::Rotation(-pitch, Vector3(1, 0, 0)) *

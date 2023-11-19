@@ -21,6 +21,8 @@ public:
 	void	UpdateScene(float dt)	override;
 	void	RenderScene()			override;
 
+	// camera method
+	void ChangeFreeMovement();
 private:
 	// methods for scene hierarchy
 	void BuildNodeLists(SceneNode* from);
@@ -42,6 +44,15 @@ private:
 	// post processing methods
 	void DrawPostProcess();
 	void PresentScreen();
+
+	// temp
+	void DrawScene();
+	vector<Mesh*> sceneMeshes;
+	vector<Matrix4> sceneTransforms;
+	float sceneTime;
+
+	// camera free movement
+	bool freeMovement;
 
 	// height map and size of heightmap
 	HeightMap* heightMap;

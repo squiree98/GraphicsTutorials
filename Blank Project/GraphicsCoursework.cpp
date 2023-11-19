@@ -17,6 +17,9 @@ int main()	{
 	w.ShowOSPointer(false);
 
 	while(w.UpdateWindow()  && !Window::GetKeyboard()->KeyDown(KEYBOARD_ESCAPE)){
+		// press back to change camera view
+		if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_BACK))
+			renderer.ChangeFreeMovement();
 		renderer.UpdateScene(w.GetTimer()->GetTimeDeltaSeconds());
 		renderer.RenderScene();
 		renderer.SwapBuffers();

@@ -43,7 +43,7 @@ void SkinnedNode::Update(float dt) {
 		this->transform = this->transform * Matrix4::Rotation(90, Vector3(0, 1, 0));
 		this->framesWalking = 0;
 	}
-	this->transform = this->transform * Matrix4::Translation(Vector3(0,0,1));
+	this->transform = this->transform * Matrix4::Translation(Vector3(0,0,0.5f));
 
 	SceneNode::Update(dt);
 }
