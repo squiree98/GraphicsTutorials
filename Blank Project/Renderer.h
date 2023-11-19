@@ -23,6 +23,7 @@ public:
 
 	// camera method
 	void ChangeFreeMovement();
+	void ResetCameras();
 private:
 	// methods for scene hierarchy
 	void BuildNodeLists(SceneNode* from);
@@ -45,14 +46,14 @@ private:
 	void DrawPostProcess();
 	void PresentScreen();
 
-	// camera free movement
-	bool freeMovement;
-
 	// height map and size of heightmap
 	HeightMap* heightMap;
 	Vector3 heightMapSize;
 
-	Camera* camera;
+	bool freeMovement;
+	Camera* cameraViews[6];
+	Camera* activeCamera;
+	int cameraIndex;
 
 	Mesh* quad;
 	Mesh* skyBoxQuad;
@@ -64,6 +65,7 @@ private:
 	// shaders
 	Shader* terrainShader;
 	Shader* planetShader;
+	Shader* planetShaderShadows;
 	Shader* waterShader;
 	Shader* skyBoxShader;
 	Shader* shadowShader;

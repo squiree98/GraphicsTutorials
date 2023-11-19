@@ -14,18 +14,14 @@ public:
 		this->pitch = pitch;
 		this->yaw = yaw;
 		this->position = position;
-		this->timePassed = 0;
-		this->sceneNumber = 1;
+		this->timePassed = 0.0f;
 	}
 
 	~Camera(void) {};
 
 	void UpdateCamera(float dt = 1.0f);
 
-	void AutoUpdateCamera(float dt = 1.0f);
-
-	// methods for auto move camera
-	void ViewSkinnedMesh(float dt);
+	float AutoMoveCamera(float dt = 1.0f);
 
 	Matrix4 BuildViewMatrix();
 
@@ -38,14 +34,12 @@ public:
 	float GetPitch() const { return pitch; }
 	void SetPitch(float p) { pitch = p; }
 
-	void ResetScene() { this->sceneNumber = 1; }
+	void ResetTimePassed() { this->timePassed = 0.0; }
 
 protected:
 	float yaw;
 	float pitch;
 	float timePassed;
-
-	int sceneNumber;
 
 	Vector3 position;
 };

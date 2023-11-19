@@ -36,31 +36,13 @@ void Camera::UpdateCamera(float dt) {
 		position.y += speed;
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_SPACE))
 		position.y -= speed;
+
+	std::cout << "Position: " << position << std::endl;
+	std::cout << "yee(360): " << yaw << std::endl;
+	std::cout << "pitch(90): " << pitch << std::endl;
 }
 
-void Camera::AutoUpdateCamera(float dt) {
-	// new scene
-	if (timePassed >= 10) {
-		sceneNumber++;
-		timePassed = 0;
-	}
-
-	pitch = std::min(pitch, 90.0f);
-	pitch = std::max(pitch, -90.0f);
-
-	if (yaw < 0)
-		yaw += 360.0f;
-	if (yaw > 360.0f)
-		yaw -= 360.0f;
-	switch (sceneNumber) {
-	case 1:
-		ViewSkinnedMesh(dt);
-	}
-
-	timePassed += dt;
-}
-
-void Camera::ViewSkinnedMesh(float dt) {
+float Camera::AutoMoveCamera(float dt) {
 	Matrix4 rotation = Matrix4::Rotation(yaw, Vector3(0, 0, 0));
 
 	// -1 because in OpenGL forward as -z
@@ -72,8 +54,8 @@ void Camera::ViewSkinnedMesh(float dt) {
 	position += forward * speed;
 
 	yaw += 0.01f;
-
-	std::cout << timePassed << std::endl;
+	timePassed += dt;
+	return timePassed;
 }
 
 Matrix4 Camera::BuildViewMatrix() {

@@ -53,14 +53,16 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	SetTextureRepeating(bumpMap, true);
 
 	// set shaders up
-	terrainShader =		new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
-	planetShader =		new Shader("ShadowSceneVertex.glsl", "ShadowSceneFragment.glsl");
-	waterShader =		new Shader("ReflectVertex.glsl", "ReflectFragment.glsl");
-	skyBoxShader =		new Shader("SkyBoxVertex.glsl", "SkyBoxFragment.glsl");
-	shadowShader =		new Shader("ShadowVertex.glsl", "ShadowFragment.glsl");
-	skinnedMeshShader = new Shader("SkinningVertex.glsl", "TexturedFragment.glsl");
-	processShader =		new Shader("TexturedVertex.glsl", "ProcessFragment.glsl");
-	sceneShader =		new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
+	terrainShader =			new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
+	planetShader =			new Shader("BumpVertex.glsl", "BumpFragment.glsl");
+	planetShaderShadows =	new Shader("ShadowSceneVertex.glsl", "ShadowSceneFragment.glsl");
+	waterShader =			new Shader("ReflectVertex.glsl", "ReflectFragment.glsl");
+	skinnedMeshShader =		new Shader("SkinningVertex.glsl", "TexturedFragment.glsl");
+
+	skyBoxShader =			new Shader("SkyBoxVertex.glsl", "SkyBoxFragment.glsl");
+	shadowShader =			new Shader("ShadowVertex.glsl", "ShadowFragment.glsl");
+	processShader =			new Shader("TexturedVertex.glsl", "ProcessFragment.glsl");
+	sceneShader =			new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
 	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess() || !shadowShader->LoadSuccess() || !skinnedMeshShader->LoadSuccess() || !processShader->LoadSuccess() || !sceneShader->LoadSuccess())
 		return;
 
@@ -111,11 +113,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		return;
 
 	// set scene nodes up
-	root = new SceneNode();
+	root =				new SceneNode();
 	terrainNode =		new TerrainNode(heightMap, planetTexture, rockTexture, terrainShader);
 	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(50,50,50), Vector3(3000,1000,3000), true);
 	planetNodeMoon =	new PlanetNode (sphere, rockTexture, planetShader, Vector3(20, 20, 20), Vector3(100, 0, 0), true);
-	cubeNode =			new PlanetNode(cube, rockTexture, planetShader, Vector3(500, 300, 500), Vector3(0.3f, 0.5f, 0.3f) * heightMapSize, false);
+	cubeNode =			new PlanetNode(cube, rockTexture, planetShaderShadows, Vector3(500, 300, 500), Vector3(0.3f, 0.5f, 0.3f) * heightMapSize, false);
 	waterNode =			new WaterNode(waterQuad, waterTexture, waterShader, terrainNode->GetModelScale());
 	skinnedNode =		new SkinnedNode(skinnedMesh, anim, material, skinnedMeshShader, Vector3(-50, 150, 100));
 	root->AddChild(terrainNode);
@@ -125,7 +127,13 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	planetNode->AddChild(planetNodeMoon);
 
 	// set the camera and lighting up
-	camera = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
+	cameraIndex = 0;
+	cameraViews[0] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
+	cameraViews[1] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
+	cameraViews[2] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
+	cameraViews[3] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
+	cameraViews[4] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
+	cameraViews[5] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
 	freeMovement = true;
 	light = new Light(Vector3(0, 5, 0) * heightMapSize, Vector4(1, 1, 1, 1), heightMapSize.x * 5);
 
@@ -146,7 +154,7 @@ Renderer::~Renderer(void) {
 	delete quad;
 
 	delete light;
-	delete camera;
+	delete activeCamera;;
 
 	delete terrainShader;
 	delete planetShader;
@@ -161,8 +169,20 @@ Renderer::~Renderer(void) {
 }
 
 void Renderer::UpdateScene(float dt) {
-	camera->UpdateCamera(dt);
-	viewMatrix = camera->BuildViewMatrix();
+	if (freeMovement) {
+		activeCamera = cameraViews[0];
+		activeCamera->UpdateCamera(dt);
+	}
+	else {
+		activeCamera = cameraViews[cameraIndex];
+		float timePassed = activeCamera->AutoMoveCamera(dt);
+		std::cout << timePassed << std::endl;
+		if (timePassed >= 10.0f)
+			cameraIndex++;
+		if (cameraIndex == 7)
+			ResetCameras();
+	}
+	viewMatrix = activeCamera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
 	waterNode->SetWaterRotate(dt, 2.0f);
@@ -184,7 +204,7 @@ void Renderer::RenderScene() {
 	DrawShadowScene();
 
 	// rebuild view and projection matrix for main scene
-	viewMatrix = camera->BuildViewMatrix();
+	viewMatrix = activeCamera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
 	DrawNodes();
@@ -203,7 +223,7 @@ void Renderer::RenderScene() {
 // methods for scene hierarchy
 
 void Renderer::BuildNodeLists(SceneNode* from) {
-	Vector3 dir = from->GetWorldTransform().GetPositionVector() - camera->GetPosition();
+	Vector3 dir = from->GetWorldTransform().GetPositionVector() - activeCamera->GetPosition();
 	from->SetCameraDistance(Vector3::Dot(dir, dir));
 
 	// add to transparent list or solid list
@@ -296,7 +316,7 @@ void Renderer::DrawTerrain(SceneNode* node) {
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, shadowTex);
 
-	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&activeCamera->GetPosition());
 
 	SetShaderLight(*light);
 }
@@ -322,7 +342,7 @@ void Renderer::DrawPlanets(SceneNode* node) {
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, shadowTex);
 
-	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+	glUniform3fv(glGetUniformLocation(node->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&activeCamera->GetPosition());
 
 	SetShaderLight(*light);
 }
@@ -339,7 +359,7 @@ void Renderer::DrawSkinned(SceneNode* node) {
 void Renderer::DrawWater(){
 	BindShader(waterNode->GetShader());
 
-	glUniform3fv(glGetUniformLocation(waterNode->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+	glUniform3fv(glGetUniformLocation(waterNode->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&activeCamera->GetPosition());
 
 	glUniform1i(glGetUniformLocation(waterNode->GetShader()->GetProgram(), "diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(waterNode->GetShader()->GetProgram(), "cubeTex"), 2);
@@ -457,12 +477,19 @@ void Renderer::PresentScreen() {
 	quad->Draw();
 }
 
-// camera resetter
+// camera switch
 
 void Renderer::ChangeFreeMovement() {
 	this->freeMovement = !freeMovement;
-	camera->SetPosition(Vector3(0.5f, 1.5f, 0.5f) * heightMapSize);
-	camera->SetPitch(0.0f);
-	camera->SetYaw(45.0f);
-	camera->ResetScene();
+	ResetCameras();
+}
+
+void Renderer::ResetCameras() {
+	cameraIndex = 0;
+	cameraViews[0] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1.5f, 0.5f));
+	cameraViews[1] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 2.5f, 0.5f));
+	cameraViews[2] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 3.5f, 0.5f));
+	cameraViews[3] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 4.5f, 0.5f));
+	cameraViews[4] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 5.5f, 0.5f));
+	cameraViews[5] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 6.5f, 0.5f));
 }
