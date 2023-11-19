@@ -17,9 +17,7 @@ WaterNode::WaterNode(Mesh* mesh, GLuint texture, Shader* shader, Vector3 scale) 
 }
 
 WaterNode::~WaterNode(void) {
-	for (unsigned int i = 0; i < children.size(); ++i) {
-		delete children[1];
-	}
+	SceneNode::~SceneNode();
 }
 
 void WaterNode::Draw(const OGLRenderer& r) {

@@ -17,9 +17,10 @@ TerrainNode::TerrainNode(HeightMap* heightMap, GLuint givenPlanetTexture, GLuint
 }
 
 TerrainNode::~TerrainNode(void) {
-	for (unsigned int i = 0; i < children.size(); ++i) {
-		delete children[1];
-	}
+	SceneNode::~SceneNode();
+
+	glDeleteTextures(1, &rockTexture);
+	glDeleteTextures(1, &planetTexture);
 }
 
 void TerrainNode::Draw(const OGLRenderer& r) {

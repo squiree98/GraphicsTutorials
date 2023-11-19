@@ -16,9 +16,7 @@ PlanetNode::PlanetNode(Mesh* mesh, GLuint texture, Shader* newShader, Vector3 sc
 }
 
 PlanetNode::~PlanetNode(void) {
-	for (unsigned int i = 0; i < children.size(); ++i) {
-		delete children[1];
-	}
+	SceneNode::~SceneNode();
 }
 
 void PlanetNode::Draw(const OGLRenderer& r) {

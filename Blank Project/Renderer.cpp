@@ -14,7 +14,7 @@
 #include <algorithm>
 
 const int SHADOWSIZE = 2048;
-const int POSTPASSES = 0;
+int POSTPASSES = 0;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// set meshes up
@@ -115,7 +115,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// set scene nodes up
 	root =				new SceneNode();
 	terrainNode =		new TerrainNode(heightMap, planetTexture, rockTexture, terrainShader);
-	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(50,50,50), Vector3(3000,1000,3000), true);
+	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(200,200,200), Vector3(4000,3000,4000), true);
 	planetNodeMoon =	new PlanetNode (sphere, rockTexture, planetShader, Vector3(20, 20, 20), Vector3(100, 0, 0), true);
 	cubeNode =			new PlanetNode(cube, rockTexture, planetShaderShadows, Vector3(500, 300, 500), Vector3(0.3f, 0.5f, 0.3f) * heightMapSize, false);
 	waterNode =			new WaterNode(waterQuad, waterTexture, waterShader, terrainNode->GetModelScale());
@@ -151,21 +151,48 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 Renderer::~Renderer(void) {
 	delete heightMap;
 
+	delete activeCamera;
+	for (Camera* x : cameraViews) { 
+		delete x;
+	}
+
 	delete quad;
+	delete skyBoxQuad;
+	delete waterQuad;
 
 	delete light;
-	delete activeCamera;;
 
 	delete terrainShader;
 	delete planetShader;
+	delete planetShaderShadows;
 	delete waterShader;
 	delete skyBoxShader;
+	delete shadowShader;
+	delete skinnedMeshShader;
+	delete sceneShader;
+	delete processShader;
+
+	glDeleteTextures(1, &cubeMap);
+	glDeleteTextures(1, &planetTexture);
+	glDeleteTextures(1, &rockTexture);
+	glDeleteTextures(1, &redPlanetTexture);
+	glDeleteTextures(1, &waterTexture);
+	glDeleteTextures(1, &bumpMap);
+	glDeleteTextures(1, &bufferFBO);
+	glDeleteTextures(1, &processFBO);
+	glDeleteTextures(1, &bufferColourTex[0]);
+	glDeleteTextures(1, &bufferColourTex[1]);
+	glDeleteTextures(1, &bufferDepthTex);
+	glDeleteTextures(1, &shadowFBO);
+	glDeleteTextures(1, &shadowTex);
 
 	delete root;
 	delete terrainNode;
-	delete planetNode;;
+	delete planetNode;
 	delete planetNodeMoon;
+	delete cubeNode;
 	delete waterNode;
+	delete skinnedNode;
 }
 
 void Renderer::UpdateScene(float dt) {
@@ -177,8 +204,12 @@ void Renderer::UpdateScene(float dt) {
 		activeCamera = cameraViews[cameraIndex];
 		float timePassed = activeCamera->AutoMoveCamera(dt);
 		std::cout << timePassed << std::endl;
-		if (timePassed >= 10.0f)
+		if (timePassed >= 9.0f)
+			POSTPASSES = 10;
+		if (timePassed >= 10.0f) {
 			cameraIndex++;
+			POSTPASSES = 0;
+		}
 		if (cameraIndex == 7)
 			ResetCameras();
 	}
@@ -487,9 +518,9 @@ void Renderer::ChangeFreeMovement() {
 void Renderer::ResetCameras() {
 	cameraIndex = 0;
 	cameraViews[0] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1.5f, 0.5f));
-	cameraViews[1] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 2.5f, 0.5f));
-	cameraViews[2] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 3.5f, 0.5f));
-	cameraViews[3] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 4.5f, 0.5f));
-	cameraViews[4] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 5.5f, 0.5f));
-	cameraViews[5] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 6.5f, 0.5f));
+	cameraViews[1] = new Camera(-15.0f, 110.0f, Vector3(3750.0f, 1000.0f, 700.0f));
+	cameraViews[2] = new Camera(0.0f, 45.0f, Vector3(0.5f, 3.5f, 0.5f));
+	cameraViews[3] = new Camera(0.0f, 45.0f, Vector3(0.5f, 4.5f, 0.5f));
+	cameraViews[4] = new Camera(0.0f, 45.0f, Vector3(0.5f, 5.5f, 0.5f));
+	cameraViews[5] = new Camera(0.0f, 45.0f, Vector3(0.5f, 6.5f, 0.5f));
 }

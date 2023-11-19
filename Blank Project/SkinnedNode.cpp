@@ -27,10 +27,14 @@ SkinnedNode::SkinnedNode(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material
 }
 
 SkinnedNode::~SkinnedNode(void) {
+	SceneNode::~SceneNode();
+
 	delete anim;
-	delete mesh;
 	delete material;
-	delete shader;
+
+	for (GLuint x : matTextures) {
+		glDeleteTextures(1, &x);
+	}
 }
 
 void SkinnedNode::Update(float dt) {
