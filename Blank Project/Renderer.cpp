@@ -224,12 +224,34 @@ Renderer::~Renderer(void) {
 	delete root_1;
 	delete terrainNode;
 	delete floatingCube;
-	delete cubeMoon;
 	delete orbitController;
+	delete cubeMoon;
 	delete cubeNode;
+	delete rockNode1;
+	delete rockNode2;
+	delete rockNode3;
 	delete waterNode;
 	delete skinnedNode;
+
 	delete root_2;
+	delete mainPlanetNode;
+	delete asteroid1;
+	delete asteroid2;
+	delete asteroid3;
+	delete orbitController1;
+	delete orbitController2;
+	delete orbitController3;
+	delete moon_1;
+	delete orbitControllerMoon1;
+	delete planet_2;
+	delete planet_3;
+
+	for (SceneNode* x : transparentNodeList) {
+		delete x;
+	}
+	for (SceneNode* x : nodeList) {
+		delete x;
+	}
 }
 
 void Renderer::UpdateScene(float dt) {

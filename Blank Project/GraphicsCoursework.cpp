@@ -2,7 +2,7 @@
 #include "Renderer.h"
 
 int main()	{
-	Window w("Coursework :-)", 1280, 720, false);
+	Window w("Coursework :-)", 1920, 1080, true);
 
 	if(!w.HasInitialised()) {
 		return -1;
