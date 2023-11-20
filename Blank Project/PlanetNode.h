@@ -5,7 +5,7 @@
 class PlanetNode : public SceneNode
 {
 public:
-	PlanetNode(Mesh* mesh, GLuint texture, Shader* newShader, Vector3 scale, Vector3 transform, bool spin);
+	PlanetNode(Mesh* mesh, GLuint texture, Shader* newShader, Vector3 scale, Vector3 transform, Vector3 rotation, bool spin, float spinSpeed);
 	~PlanetNode(void);
 
 	void	Update(float dt)			override;
@@ -16,5 +16,8 @@ public:
 
 protected:
 	bool spin;
+	float spinSpeed;
+
+	Vector3 rotation;
 };
 

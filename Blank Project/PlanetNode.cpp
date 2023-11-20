@@ -1,6 +1,6 @@
 #include "PlanetNode.h"
 
-PlanetNode::PlanetNode(Mesh* mesh, GLuint texture, Shader* newShader, Vector3 scale, Vector3 transform, bool spin) {
+PlanetNode::PlanetNode(Mesh* mesh, GLuint texture, Shader* newShader, Vector3 scale, Vector3 transform, Vector3 rotation, bool spin, float spinSpeed) {
 	this->mesh = mesh;
 	this->colour = Vector4(1, 1, 1, 1);
 	this->parent = NULL;
@@ -13,6 +13,8 @@ PlanetNode::PlanetNode(Mesh* mesh, GLuint texture, Shader* newShader, Vector3 sc
 	this->isHeightMap = 0;
 	this->isSkinned = 0;
 	this->spin = spin;
+	this->spinSpeed = spinSpeed;
+	this->rotation = rotation;
 }
 
 PlanetNode::~PlanetNode(void) {
@@ -26,7 +28,7 @@ void PlanetNode::Draw(const OGLRenderer& r) {
 
 void PlanetNode::Update(float dt) {
 	if (spin)
-		SetTransform(GetTransform() * Matrix4::Rotation(30.0f * dt, Vector3(0, 1, 0)));
+		SetTransform(GetTransform() * Matrix4::Rotation(spinSpeed * dt, rotation));
 
 	SceneNode::Update(dt);
 }

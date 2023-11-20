@@ -23,7 +23,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// set up camera and lighting
 	Vector3 heightMapSize = heightMap->GetHeightMapSize();
 	camera = new Camera(-45.0f, 0.0f, heightMapSize * Vector3(0.5f, 5.0f, 0.5f));
-	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightMapSize.x * 0.5f);
+	light = new Light(heightMapSize * Vector3(1.0f, 1.5f, 1.0f), Vector4(1, 1, 1, 1), heightMapSize.x * 2.0f);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
 	glEnable(GL_DEPTH_TEST);

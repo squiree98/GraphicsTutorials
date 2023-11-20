@@ -24,7 +24,10 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// sphere and quad for water, cubemap, and planets
 	Mesh* sphere = Mesh::LoadFromMeshFile("Sphere.msh");
-	Mesh* cube	 = Mesh::LoadFromMeshFile("Cube.msh");
+	Mesh* cube	 = Mesh::LoadFromMeshFile("cube.msh");
+	Mesh* rock_1 = Mesh::LoadFromMeshFile("Rock_02.msh");
+	Mesh* rock_2 = Mesh::LoadFromMeshFile("Rock_05.msh");
+	Mesh* rock_3 = Mesh::LoadFromMeshFile("Rock_06.msh");
 	waterQuad = Mesh::GenerateQuad();
 	skyBoxQuad = Mesh::GenerateQuad();
 	quad = Mesh::GenerateQuad();
@@ -36,7 +39,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// set textures up
 	rockTexture			= SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	planetTexture		= SOIL_load_OGL_texture(TEXTUREDIR"images_1.jpeg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	planetTexture1		= SOIL_load_OGL_texture(TEXTUREDIR"planet.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	planetTexture2		= SOIL_load_OGL_texture(TEXTUREDIR"planet_2.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	planetTexture3		= SOIL_load_OGL_texture(TEXTUREDIR"planet_3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	redPlanetTexture	= SOIL_load_OGL_texture(TEXTUREDIR"red_planet.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	waterTexture		= SOIL_load_OGL_texture(TEXTUREDIR"water.TGA", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	bumpMap				= SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
@@ -44,10 +49,12 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 												TEXTUREDIR"top.png",		TEXTUREDIR"bottom.png",
 												TEXTUREDIR"front.png",	TEXTUREDIR"back.png",
 												SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
-	if (!rockTexture || !planetTexture || !redPlanetTexture || !waterTexture || !cubeMap || !bumpMap)
+	if (!rockTexture || !planetTexture1 || !planetTexture2 || !planetTexture3 || !redPlanetTexture || !waterTexture || !cubeMap || !bumpMap)
 		return;
 	SetTextureRepeating(rockTexture, true);
-	SetTextureRepeating(planetTexture, true);
+	SetTextureRepeating(planetTexture1, true);
+	SetTextureRepeating(planetTexture2, true);
+	SetTextureRepeating(planetTexture3, true);
 	SetTextureRepeating(redPlanetTexture, true);
 	SetTextureRepeating(waterTexture, true);
 	SetTextureRepeating(bumpMap, true);
@@ -63,7 +70,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	shadowShader =			new Shader("ShadowVertex.glsl", "ShadowFragment.glsl");
 	processShader =			new Shader("TexturedVertex.glsl", "ProcessFragment.glsl");
 	sceneShader =			new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
-	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess() || !shadowShader->LoadSuccess() || !skinnedMeshShader->LoadSuccess() || !processShader->LoadSuccess() || !sceneShader->LoadSuccess())
+	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !planetShaderShadows->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess() || !shadowShader->LoadSuccess() || !skinnedMeshShader->LoadSuccess() || !processShader->LoadSuccess() || !sceneShader->LoadSuccess())
 		return;
 
 	// set shadow texture up
@@ -112,30 +119,56 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !bufferDepthTex || !bufferColourTex[0])
 		return;
 
-	// set scene nodes up
-	root =				new SceneNode();
-	terrainNode =		new TerrainNode(heightMap, planetTexture, rockTexture, terrainShader);
-	planetNode =		new PlanetNode (sphere, redPlanetTexture, planetShader, Vector3(200,200,200), Vector3(4000,3000,4000), true);
-	planetNodeMoon =	new PlanetNode (sphere, rockTexture, planetShader, Vector3(20, 20, 20), Vector3(100, 0, 0), true);
-	cubeNode =			new PlanetNode(cube, rockTexture, planetShaderShadows, Vector3(500, 300, 500), Vector3(0.3f, 0.5f, 0.3f) * heightMapSize, false);
+	// generate scene 1
+	root_1 =			new SceneNode();
+	terrainNode =		new TerrainNode(heightMap, planetTexture1, rockTexture, terrainShader);
+	rockNode1 =			new PlanetNode (rock_1, rockTexture, planetShaderShadows, Vector3(100, 100, 100), Vector3(0.2f, 0.8f, 0.75) * heightMapSize, Vector3(0, 0, 0),  false, 0);
+	rockNode2 =			new PlanetNode (rock_2, rockTexture, planetShaderShadows, Vector3(130, 130, 130), Vector3(0.5f, 0.8f, 0.2f) * heightMapSize, Vector3(0, 0, 0), false, 0);
+	rockNode3 =			new PlanetNode (rock_3, rockTexture, planetShaderShadows, Vector3(200, 100, 200), Vector3(0.4f, 0.8f, 0.7f) * heightMapSize, Vector3(0, 0, 0), false, 0);
+	floatingCube =		new PlanetNode (cube, redPlanetTexture, planetShaderShadows, Vector3(200,200,200), Vector3(0.3f,3.5f, 0.3f) * heightMapSize, Vector3(1, 1, 1), true, 30.0f);
+	orbitController =	new PlanetNode (NULL, NULL, NULL, Vector3(0,0,0), Vector3(0, 0, 0), Vector3(0, 1, 0), true, 40.0f);
+	cubeMoon =			new PlanetNode (cube, rockTexture, planetShaderShadows, Vector3(50, 50, 50), Vector3(300, 0, 0), Vector3(1, 1, 1), true, 45.0f);
+	cubeNode =			new PlanetNode (cube, rockTexture, planetShaderShadows, Vector3(500, 300, 500), Vector3(0.3f, 0.5f, 0.3f) * heightMapSize, Vector3(0, 0, 0), false, 0.0f);
 	waterNode =			new WaterNode(waterQuad, waterTexture, waterShader, terrainNode->GetModelScale());
 	skinnedNode =		new SkinnedNode(skinnedMesh, anim, material, skinnedMeshShader, Vector3(-50, 150, 100));
-	root->AddChild(terrainNode);
-	terrainNode->AddChild(planetNode);
+	root_1->AddChild(terrainNode);
+	terrainNode->AddChild(rockNode1);
+	terrainNode->AddChild(rockNode2);
+	terrainNode->AddChild(rockNode3);
+	terrainNode->AddChild(floatingCube);
 	terrainNode->AddChild(cubeNode);
 	cubeNode->AddChild(skinnedNode);
-	planetNode->AddChild(planetNodeMoon);
+	floatingCube->AddChild(orbitController);
+	orbitController->AddChild(cubeMoon);
 
-	// set the camera and lighting up
-	cameraIndex = 0;
-	cameraViews[0] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
-	cameraViews[1] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
-	cameraViews[2] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
-	cameraViews[3] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
-	cameraViews[4] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
-	cameraViews[5] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1, 0.5f));
-	freeMovement = true;
-	light = new Light(Vector3(0, 5, 0) * heightMapSize, Vector4(1, 1, 1, 1), heightMapSize.x * 5);
+	// generate scene 2
+	root_2 =				new SceneNode();
+	mainPlanetNode =		new PlanetNode(sphere, planetTexture1, planetShaderShadows, Vector3(800, 800, 800), Vector3(800,0,800), Vector3(0,1,0), true, 30.0f);
+	asteroid1 =				new PlanetNode(rock_1, rockTexture, planetShaderShadows, Vector3(50, 50, 50), Vector3(1500, 0, 0), Vector3(1,1,1), true, 20.0f);
+	orbitController1 =		new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 0), true, 40.0f);
+	asteroid2 =				new PlanetNode(rock_2, rockTexture, planetShaderShadows, Vector3(15, 15, 15), Vector3(1550, 0, 0), Vector3(1, 0, 1), true, 20.0f);
+	orbitController2 =		new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(1, 1, 1), true, -30.0f);
+	asteroid3 =				new PlanetNode(rock_3, rockTexture, planetShaderShadows, Vector3(40, 40, 40), Vector3(2000, 0, 0), Vector3(1, 1, 0), true, 20.0f);
+	orbitController3 =		new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 1), true, 60.0f);
+	moon_1 =				new PlanetNode(sphere, planetTexture3, planetShaderShadows, Vector3(250, 250, 250), Vector3(3500, 0, 0), Vector3(1, 1, 0), true, 20.0f);
+	orbitControllerMoon1 =	new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 0), true, 1.0f);
+	planet_2 =				new PlanetNode(sphere, planetTexture2, planetShader, Vector3(1200, 1200, 1200), Vector3(-7800, 1600, 7000), Vector3(1, 1, 1), true, 5.0f);
+	planet_3 =				new PlanetNode(sphere, redPlanetTexture, planetShader, Vector3(400, 400, 400), Vector3(-7000, 1100, -5400), Vector3(1, 1, 0), true, 60.0f);;
+	root_2->AddChild(mainPlanetNode);
+	mainPlanetNode->AddChild(orbitController1);
+	orbitController1->AddChild(asteroid1);
+	mainPlanetNode->AddChild(orbitController2);
+	orbitController2->AddChild(asteroid2);
+	mainPlanetNode->AddChild(orbitController3);
+	orbitController3->AddChild(asteroid3);
+	mainPlanetNode->AddChild(orbitControllerMoon1);
+	orbitControllerMoon1->AddChild(moon_1);
+	root_2->AddChild(planet_2);
+	root_2->AddChild(planet_3);
+
+
+	ResetCameras();
+	freeMovement = false;
 
 	// turn depth test on and start rendering
 	glEnable(GL_DEPTH_TEST);
@@ -173,7 +206,9 @@ Renderer::~Renderer(void) {
 	delete processShader;
 
 	glDeleteTextures(1, &cubeMap);
-	glDeleteTextures(1, &planetTexture);
+	glDeleteTextures(1, &planetTexture1);
+	glDeleteTextures(1, &planetTexture2);
+	glDeleteTextures(1, &planetTexture3);
 	glDeleteTextures(1, &rockTexture);
 	glDeleteTextures(1, &redPlanetTexture);
 	glDeleteTextures(1, &waterTexture);
@@ -186,30 +221,33 @@ Renderer::~Renderer(void) {
 	glDeleteTextures(1, &shadowFBO);
 	glDeleteTextures(1, &shadowTex);
 
-	delete root;
+	delete root_1;
 	delete terrainNode;
-	delete planetNode;
-	delete planetNodeMoon;
+	delete floatingCube;
+	delete cubeMoon;
+	delete orbitController;
 	delete cubeNode;
 	delete waterNode;
 	delete skinnedNode;
+	delete root_2;
 }
 
 void Renderer::UpdateScene(float dt) {
 	if (freeMovement) {
-		activeCamera = cameraViews[0];
+		activeCamera = cameraViews[cameraIndex];
 		activeCamera->UpdateCamera(dt);
 	}
 	else {
 		activeCamera = cameraViews[cameraIndex];
 		float timePassed = activeCamera->AutoMoveCamera(dt);
-		std::cout << timePassed << std::endl;
 		if (timePassed >= 9.0f)
 			POSTPASSES = 10;
 		if (timePassed >= 10.0f) {
 			cameraIndex++;
 			POSTPASSES = 0;
 		}
+		if (cameraIndex == 3)
+			sceneView = 2;
 		if (cameraIndex == 7)
 			ResetCameras();
 	}
@@ -219,12 +257,28 @@ void Renderer::UpdateScene(float dt) {
 	waterNode->SetWaterRotate(dt, 2.0f);
 	waterNode->SetWaterCycle(dt, 0.25f);
 
-	root->Update(dt);
+	switch (sceneView) {
+	case (1):
+		root_1->Update(dt);
+		break;
+	case(2):
+		root_2->Update(dt);
+		break;
+	}
 }
 
 void Renderer::RenderScene() {
 	// set up node lists for building
-	BuildNodeLists(root);
+	switch (sceneView) {
+	case (1):
+		light = new Light(Vector3(0.0f, 4, 0.0f) * heightMapSize, Vector4(1, 1, 1, 1), heightMapSize.x * 15);
+		BuildNodeLists(root_1);
+		break;
+	case(2):
+		light = new Light(Vector3(3475.92, 593.262, 952.303), Vector4(1, 1, 1, 1), heightMapSize.x * 15);
+		BuildNodeLists(root_2);
+		break;
+	}
 	SortNodeLists();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
@@ -240,7 +294,8 @@ void Renderer::RenderScene() {
 
 	DrawNodes();
 
-	DrawWater();
+	if(sceneView == 1)
+		DrawWater();
 
 	ClearNodeLists();
 
@@ -424,8 +479,8 @@ void Renderer::DrawShadowScene() {
 
 	// generate shadow map
 	BindShader(shadowShader);
-	viewMatrix = Matrix4::BuildViewMatrix(light->GetPosition(), heightMapSize * Vector3(1, 0, 1));
-	projMatrix = Matrix4::Perspective(1, 150000, (float)width / (float)height, 45);
+	viewMatrix = Matrix4::BuildViewMatrix(light->GetPosition(), Vector3(0.2f, 0, 0.2f) * heightMapSize);
+	projMatrix = Matrix4::Perspective(1, 15000, (float)width / (float)height, 90);
 	shadowMatrix = projMatrix * viewMatrix;
 
 	// draw nodes
@@ -517,10 +572,25 @@ void Renderer::ChangeFreeMovement() {
 
 void Renderer::ResetCameras() {
 	cameraIndex = 0;
+	sceneView = 1;
 	cameraViews[0] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1.5f, 0.5f));
-	cameraViews[1] = new Camera(-15.0f, 110.0f, Vector3(3750.0f, 1000.0f, 700.0f));
-	cameraViews[2] = new Camera(0.0f, 45.0f, Vector3(0.5f, 3.5f, 0.5f));
-	cameraViews[3] = new Camera(0.0f, 45.0f, Vector3(0.5f, 4.5f, 0.5f));
-	cameraViews[4] = new Camera(0.0f, 45.0f, Vector3(0.5f, 5.5f, 0.5f));
-	cameraViews[5] = new Camera(0.0f, 45.0f, Vector3(0.5f, 6.5f, 0.5f));
+	cameraViews[1] = new Camera(-12.0f, 130.0f, Vector3(3070.0f, 870.0f, 100.0f));
+	cameraViews[2] = new Camera(290.0f, -21.0f, Vector3(700.0f,1100.0f,3600.0f));
+	cameraViews[3] = new Camera(-3.0f, 80.0f, Vector3(4360.0f, 230.0f, 135.0f));
+	cameraViews[4] = new Camera(-17.0f, 330.0f, Vector3(-7470.0f, 4403.0f, 10258.0f));
+	cameraViews[5] = new Camera(-35.0f, 85, Vector3(6720.0f, 6860.0f, 725.0f));
+	POSTPASSES = 0;
+}
+
+void Renderer::ChangeScene() {
+	if (freeMovement) {
+		switch (sceneView) {
+		case (2):
+			sceneView = 1;
+			break;
+		case(1):
+			sceneView = 2;
+			break;
+		}
+	}
 }

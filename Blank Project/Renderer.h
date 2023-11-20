@@ -23,8 +23,11 @@ public:
 
 	// camera method
 	void ChangeFreeMovement();
-	void ResetCameras();
+	void ChangeScene();
 private:
+	// cameras
+	void ResetCameras();
+
 	// methods for scene hierarchy
 	void BuildNodeLists(SceneNode* from);
 	void SortNodeLists();
@@ -75,7 +78,9 @@ private:
 
 	// textures + bump maps + cube map
 	GLuint cubeMap;
-	GLuint planetTexture;
+	GLuint planetTexture1;
+	GLuint planetTexture2;
+	GLuint planetTexture3;
 	GLuint rockTexture;
 	GLuint redPlanetTexture;
 	GLuint waterTexture;
@@ -89,15 +94,34 @@ private:
 	GLuint shadowFBO;
 	GLuint shadowTex;
 
+	int sceneView;
+
 	// variables for scene hierarchy
-	SceneNode* root;
+	SceneNode* root_1;
 	TerrainNode* terrainNode;
-	PlanetNode* planetNode;
-	PlanetNode* planetNodeMoon;
+	PlanetNode* floatingCube;
+	PlanetNode* orbitController;
+	PlanetNode* cubeMoon;
 	PlanetNode* cubeNode;
+	PlanetNode* rockNode1;
+	PlanetNode* rockNode2;
+	PlanetNode* rockNode3;
 	WaterNode* waterNode;
 	SkinnedNode* skinnedNode;
 
+	SceneNode* root_2;
+	PlanetNode* mainPlanetNode;
+	PlanetNode* asteroid1;
+	PlanetNode* orbitController1;
+	PlanetNode* asteroid2;
+	PlanetNode* orbitController2;
+	PlanetNode* asteroid3;
+	PlanetNode* orbitController3;
+	PlanetNode* moon_1;
+	PlanetNode* orbitControllerMoon1;
+
+	PlanetNode* planet_2;
+	PlanetNode* planet_3;
 
 	vector<SceneNode*> transparentNodeList;
 	vector<SceneNode*> nodeList;

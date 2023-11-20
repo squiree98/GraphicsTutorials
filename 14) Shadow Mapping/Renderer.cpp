@@ -7,7 +7,7 @@ float SHADOWSIZE = 2048.0f;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// camera and light
-	camera = new Camera(-30.0f, 315.0f, Vector3(-8.0f, 5.0f, 8.0f));
+	camera = new Camera(-30.0f, 315.0f, Vector3(0,0,0));
 	light = new Light(Vector3(-20.0f, 10.0f, -20.0f), Vector4(1,1,1,1), 250.0f);
 
 	//// shaders

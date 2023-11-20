@@ -20,6 +20,8 @@ int main()	{
 		// press back to change camera view
 		if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_BACK))
 			renderer.ChangeFreeMovement();
+		if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_TAB))
+			renderer.ChangeScene();
 		renderer.UpdateScene(w.GetTimer()->GetTimeDeltaSeconds());
 		renderer.RenderScene();
 		renderer.SwapBuffers();
