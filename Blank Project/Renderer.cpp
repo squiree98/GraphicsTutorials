@@ -2,8 +2,6 @@
 #include "../nclgl/Shader.h"
 #include "../nclgl/HeightMap.h"
 #include "../nclgl/Light.h"
-#include "../nclgl/MeshMaterial.h"
-#include "../nclgl/MeshAnimation.h"
 
 #include "Renderer.h"
 #include "TerrainNode.h"
@@ -17,154 +15,17 @@ const int SHADOWSIZE = 2048;
 int POSTPASSES = 0;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
-	// set meshes up
-	// height map for terrain
-	heightMap = new HeightMap(TEXTUREDIR"noise.png");
-	heightMapSize = heightMap->GetHeightMapSize();
+	SetUpMeshes();
 
-	// sphere and quad for water, cubemap, and planets
-	Mesh* sphere = Mesh::LoadFromMeshFile("Sphere.msh");
-	Mesh* cube	 = Mesh::LoadFromMeshFile("cube.msh");
-	Mesh* rock_1 = Mesh::LoadFromMeshFile("Rock_02.msh");
-	Mesh* rock_2 = Mesh::LoadFromMeshFile("Rock_05.msh");
-	Mesh* rock_3 = Mesh::LoadFromMeshFile("Rock_06.msh");
-	waterQuad = Mesh::GenerateQuad();
-	skyBoxQuad = Mesh::GenerateQuad();
-	quad = Mesh::GenerateQuad();
+	SetUpTextures();
 
-	// load skinned mesh data
-	Mesh* skinnedMesh = Mesh::LoadFromMeshFile("Role_T.msh");
-	MeshAnimation* anim = new MeshAnimation("Role_T.anm");
-	MeshMaterial* material = new MeshMaterial("Role_T.mat");
+	SetUpShaders();
 
-	// set textures up
-	rockTexture			= SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	planetTexture1		= SOIL_load_OGL_texture(TEXTUREDIR"planet.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	planetTexture2		= SOIL_load_OGL_texture(TEXTUREDIR"planet_2.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	planetTexture3		= SOIL_load_OGL_texture(TEXTUREDIR"planet_3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	redPlanetTexture	= SOIL_load_OGL_texture(TEXTUREDIR"red_planet.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	waterTexture		= SOIL_load_OGL_texture(TEXTUREDIR"water.TGA", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	bumpMap				= SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	cubeMap				= SOIL_load_OGL_cubemap(TEXTUREDIR"right.png",	TEXTUREDIR"left.png",
-												TEXTUREDIR"top.png",		TEXTUREDIR"bottom.png",
-												TEXTUREDIR"front.png",	TEXTUREDIR"back.png",
-												SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
-	if (!rockTexture || !planetTexture1 || !planetTexture2 || !planetTexture3 || !redPlanetTexture || !waterTexture || !cubeMap || !bumpMap)
-		return;
-	SetTextureRepeating(rockTexture, true);
-	SetTextureRepeating(planetTexture1, true);
-	SetTextureRepeating(planetTexture2, true);
-	SetTextureRepeating(planetTexture3, true);
-	SetTextureRepeating(redPlanetTexture, true);
-	SetTextureRepeating(waterTexture, true);
-	SetTextureRepeating(bumpMap, true);
+	SetUpShadowMapping();
 
-	// set shaders up
-	terrainShader =			new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
-	planetShader =			new Shader("BumpVertex.glsl", "BumpFragment.glsl");
-	planetShaderShadows =	new Shader("ShadowSceneVertex.glsl", "ShadowSceneFragment.glsl");
-	waterShader =			new Shader("ReflectVertex.glsl", "ReflectFragment.glsl");
-	skinnedMeshShader =		new Shader("SkinningVertex.glsl", "TexturedFragment.glsl");
+	SetUpPostProcessing();
 
-	skyBoxShader =			new Shader("SkyBoxVertex.glsl", "SkyBoxFragment.glsl");
-	shadowShader =			new Shader("ShadowVertex.glsl", "ShadowFragment.glsl");
-	processShader =			new Shader("TexturedVertex.glsl", "ProcessFragment.glsl");
-	sceneShader =			new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
-	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !planetShaderShadows->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess() || !shadowShader->LoadSuccess() || !skinnedMeshShader->LoadSuccess() || !processShader->LoadSuccess() || !sceneShader->LoadSuccess())
-		return;
-
-	// set shadow texture up
-	glGenTextures(1, &shadowTex);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	// set shadow FBO up and attatch shadow texture
-	glGenFramebuffers(1, &shadowFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTex, 0);
-	glDrawBuffer(GL_NONE);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	// set post processing up
-	// get texture for buffer
-	glGenTextures	(1, &bufferDepthTex);
-	glBindTexture	(GL_TEXTURE_2D, bufferDepthTex);
-	glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D	(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
-	for (int i = 0; i < 2; i++) {
-		glGenTextures	(1, &bufferColourTex[i]);
-		glBindTexture	(GL_TEXTURE_2D, bufferColourTex[i]);
-		glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameterf	(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexImage2D	(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	}
-	// set buffer up
-	glGenFramebuffers(1, &bufferFBO); // render scene here
-	glGenFramebuffers(1, &processFBO);// post processing here
-
-	// bind and attatch textures
-	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, bufferDepthTex, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, bufferDepthTex, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[0], 0);
-	// check success
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !bufferDepthTex || !bufferColourTex[0])
-		return;
-
-	// generate scene 1
-	root_1 =			new SceneNode();
-	terrainNode =		new TerrainNode(heightMap, planetTexture1, rockTexture, terrainShader);
-	rockNode1 =			new PlanetNode (rock_1, rockTexture, planetShaderShadows, Vector3(100, 100, 100), Vector3(0.2f, 0.8f, 0.75) * heightMapSize, Vector3(0, 0, 0),  false, 0);
-	rockNode2 =			new PlanetNode (rock_2, rockTexture, planetShaderShadows, Vector3(130, 130, 130), Vector3(0.5f, 0.8f, 0.2f) * heightMapSize, Vector3(0, 0, 0), false, 0);
-	rockNode3 =			new PlanetNode (rock_3, rockTexture, planetShaderShadows, Vector3(200, 100, 200), Vector3(0.4f, 0.8f, 0.7f) * heightMapSize, Vector3(0, 0, 0), false, 0);
-	floatingCube =		new PlanetNode (cube, redPlanetTexture, planetShaderShadows, Vector3(200,200,200), Vector3(0.3f,3.5f, 0.3f) * heightMapSize, Vector3(1, 1, 1), true, 30.0f);
-	orbitController =	new PlanetNode (NULL, NULL, NULL, Vector3(0,0,0), Vector3(0, 0, 0), Vector3(0, 1, 0), true, 40.0f);
-	cubeMoon =			new PlanetNode (cube, rockTexture, planetShaderShadows, Vector3(50, 50, 50), Vector3(300, 0, 0), Vector3(1, 1, 1), true, 45.0f);
-	cubeNode =			new PlanetNode (cube, rockTexture, planetShaderShadows, Vector3(500, 300, 500), Vector3(0.3f, 0.5f, 0.3f) * heightMapSize, Vector3(0, 0, 0), false, 0.0f);
-	waterNode =			new WaterNode(waterQuad, waterTexture, waterShader, terrainNode->GetModelScale());
-	skinnedNode =		new SkinnedNode(skinnedMesh, anim, material, skinnedMeshShader, Vector3(-50, 150, 100));
-	root_1->AddChild(terrainNode);
-	terrainNode->AddChild(rockNode1);
-	terrainNode->AddChild(rockNode2);
-	terrainNode->AddChild(rockNode3);
-	terrainNode->AddChild(floatingCube);
-	terrainNode->AddChild(cubeNode);
-	cubeNode->AddChild(skinnedNode);
-	floatingCube->AddChild(orbitController);
-	orbitController->AddChild(cubeMoon);
-
-	// generate scene 2
-	root_2 =				new SceneNode();
-	mainPlanetNode =		new PlanetNode(sphere, planetTexture1, planetShaderShadows, Vector3(800, 800, 800), Vector3(800,0,800), Vector3(0,1,0), true, 30.0f);
-	asteroid1 =				new PlanetNode(rock_1, rockTexture, planetShaderShadows, Vector3(50, 50, 50), Vector3(1500, 0, 0), Vector3(1,1,1), true, 20.0f);
-	orbitController1 =		new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 0), true, 40.0f);
-	asteroid2 =				new PlanetNode(rock_2, rockTexture, planetShaderShadows, Vector3(15, 15, 15), Vector3(1550, 0, 0), Vector3(1, 0, 1), true, 20.0f);
-	orbitController2 =		new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(1, 1, 1), true, -30.0f);
-	asteroid3 =				new PlanetNode(rock_3, rockTexture, planetShaderShadows, Vector3(40, 40, 40), Vector3(2000, 0, 0), Vector3(1, 1, 0), true, 20.0f);
-	orbitController3 =		new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 1), true, 60.0f);
-	moon_1 =				new PlanetNode(sphere, planetTexture3, planetShaderShadows, Vector3(250, 250, 250), Vector3(3500, 0, 0), Vector3(1, 1, 0), true, 20.0f);
-	orbitControllerMoon1 =	new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 0), true, 1.0f);
-	planet_2 =				new PlanetNode(sphere, planetTexture2, planetShader, Vector3(1200, 1200, 1200), Vector3(-7800, 1600, 7000), Vector3(1, 1, 1), true, 5.0f);
-	planet_3 =				new PlanetNode(sphere, redPlanetTexture, planetShader, Vector3(400, 400, 400), Vector3(-7000, 1100, -5400), Vector3(1, 1, 0), true, 60.0f);;
-	root_2->AddChild(mainPlanetNode);
-	mainPlanetNode->AddChild(orbitController1);
-	orbitController1->AddChild(asteroid1);
-	mainPlanetNode->AddChild(orbitController2);
-	orbitController2->AddChild(asteroid2);
-	mainPlanetNode->AddChild(orbitController3);
-	orbitController3->AddChild(asteroid3);
-	mainPlanetNode->AddChild(orbitControllerMoon1);
-	orbitControllerMoon1->AddChild(moon_1);
-	root_2->AddChild(planet_2);
-	root_2->AddChild(planet_3);
+	SetUpSceneHierarchies();
 
 
 	ResetCameras();
@@ -185,7 +46,7 @@ Renderer::~Renderer(void) {
 	delete heightMap;
 
 	delete activeCamera;
-	for (Camera* x : cameraViews) { 
+	for (Camera* x : cameraViews) {
 		delete x;
 	}
 
@@ -316,7 +177,7 @@ void Renderer::RenderScene() {
 
 	DrawNodes();
 
-	if(sceneView == 1)
+	if (sceneView == 1)
 		DrawWater();
 
 	ClearNodeLists();
@@ -326,6 +187,176 @@ void Renderer::RenderScene() {
 	DrawPostProcess();
 
 	PresentScreen();
+}
+
+// methods for setting up scene
+
+void Renderer::SetUpMeshes() {
+	// set meshes up
+	// height map for terrain
+	heightMap = new HeightMap(TEXTUREDIR"noise.png");
+	heightMapSize = heightMap->GetHeightMapSize();
+
+	// sphere and quad for water, cubemap, and planets
+	sphere = Mesh::LoadFromMeshFile("Sphere.msh");
+	cube = Mesh::LoadFromMeshFile("cube.msh");
+	rock_1 = Mesh::LoadFromMeshFile("Rock_02.msh");
+	rock_2 = Mesh::LoadFromMeshFile("Rock_05.msh");
+	rock_3 = Mesh::LoadFromMeshFile("Rock_06.msh");
+	waterQuad = Mesh::GenerateQuad();
+	skyBoxQuad = Mesh::GenerateQuad();
+	quad = Mesh::GenerateQuad();
+
+	// load skinned mesh data
+	skinnedMesh = Mesh::LoadFromMeshFile("Role_T.msh");
+	anim = new MeshAnimation("Role_T.anm");
+	material = new MeshMaterial("Role_T.mat");
+}
+
+void Renderer::SetUpTextures() {
+	// set textures up
+	rockTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	planetTexture1 = SOIL_load_OGL_texture(TEXTUREDIR"planet.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	planetTexture2 = SOIL_load_OGL_texture(TEXTUREDIR"planet_2.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	planetTexture3 = SOIL_load_OGL_texture(TEXTUREDIR"planet_3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	redPlanetTexture = SOIL_load_OGL_texture(TEXTUREDIR"red_planet.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	waterTexture = SOIL_load_OGL_texture(TEXTUREDIR"water.TGA", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	bumpMap = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	cubeMap = SOIL_load_OGL_cubemap(TEXTUREDIR"right.png", TEXTUREDIR"left.png",
+		TEXTUREDIR"top.png", TEXTUREDIR"bottom.png",
+		TEXTUREDIR"front.png", TEXTUREDIR"back.png",
+		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
+	if (!rockTexture || !planetTexture1 || !planetTexture2 || !planetTexture3 || !redPlanetTexture || !waterTexture || !cubeMap || !bumpMap)
+		return;
+	SetTextureRepeating(rockTexture, true);
+	SetTextureRepeating(planetTexture1, true);
+	SetTextureRepeating(planetTexture2, true);
+	SetTextureRepeating(planetTexture3, true);
+	SetTextureRepeating(redPlanetTexture, true);
+	SetTextureRepeating(waterTexture, true);
+	SetTextureRepeating(bumpMap, true);
+}
+
+void Renderer::SetUpShaders() {
+	// set shaders up
+	terrainShader = new Shader("TerrainVertex.glsl", "TerrainFragment.glsl");
+	planetShader = new Shader("BumpVertex.glsl", "BumpFragment.glsl");
+	planetShaderShadows = new Shader("ShadowSceneVertex.glsl", "ShadowSceneFragment.glsl");
+	waterShader = new Shader("ReflectVertex.glsl", "ReflectFragment.glsl");
+	skinnedMeshShader = new Shader("SkinningVertex.glsl", "TexturedFragment.glsl");
+
+	skyBoxShader = new Shader("SkyBoxVertex.glsl", "SkyBoxFragment.glsl");
+	shadowShader = new Shader("ShadowVertex.glsl", "ShadowFragment.glsl");
+	processShader = new Shader("TexturedVertex.glsl", "ProcessFragment.glsl");
+	sceneShader = new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
+	if (!terrainShader->LoadSuccess() || !planetShader->LoadSuccess() || !planetShaderShadows->LoadSuccess() || !waterShader->LoadSuccess() || !skyBoxShader->LoadSuccess() || !shadowShader->LoadSuccess() || !skinnedMeshShader->LoadSuccess() || !processShader->LoadSuccess() || !sceneShader->LoadSuccess())
+		return;
+}
+
+void Renderer::SetUpShadowMapping() {
+	// set shadow texture up
+	glGenTextures(1, &shadowTex);
+	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	// set shadow FBO up and attatch shadow texture
+	glGenFramebuffers(1, &shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTex, 0);
+	glDrawBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::SetUpPostProcessing() {
+	// set post processing up
+	// get texture for buffer
+	glGenTextures(1, &bufferDepthTex);
+	glBindTexture(GL_TEXTURE_2D, bufferDepthTex);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, 1920, 1080, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+	for (int i = 0; i < 2; i++) {
+		glGenTextures(1, &bufferColourTex[i]);
+		glBindTexture(GL_TEXTURE_2D, bufferColourTex[i]);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	}
+	// set buffer up
+	glGenFramebuffers(1, &bufferFBO); // render scene here
+	glGenFramebuffers(1, &processFBO);// post processing here
+
+	// bind and attatch textures
+	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, bufferDepthTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, bufferDepthTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[0], 0);
+	// check success
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !bufferDepthTex || !bufferColourTex[0])
+		return;
+}
+
+void Renderer::SetUpSceneHierarchies() {
+	SetUpGroundScene();
+
+	SetUpSpaceScene();
+}
+
+void Renderer::SetUpGroundScene() {
+	// generate ground scene
+	root_1 = new SceneNode();
+	terrainNode = new TerrainNode(heightMap, planetTexture1, rockTexture, terrainShader);
+	rockNode1 = new PlanetNode(rock_1, rockTexture, planetShaderShadows, Vector3(100, 100, 100), Vector3(0.2f, 0.8f, 0.75) * heightMapSize, Vector3(0, 0, 0), false, 0);
+	rockNode2 = new PlanetNode(rock_2, rockTexture, planetShaderShadows, Vector3(130, 130, 130), Vector3(0.5f, 0.8f, 0.2f) * heightMapSize, Vector3(0, 0, 0), false, 0);
+	rockNode3 = new PlanetNode(rock_3, rockTexture, planetShaderShadows, Vector3(200, 100, 200), Vector3(0.4f, 0.8f, 0.7f) * heightMapSize, Vector3(0, 0, 0), false, 0);
+	floatingCube = new PlanetNode(cube, redPlanetTexture, planetShaderShadows, Vector3(200, 200, 200), Vector3(0.3f, 3.5f, 0.3f) * heightMapSize, Vector3(1, 1, 1), true, 30.0f);
+	orbitController = new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 0), true, 40.0f);
+	cubeMoon = new PlanetNode(cube, rockTexture, planetShaderShadows, Vector3(50, 50, 50), Vector3(300, 0, 0), Vector3(1, 1, 1), true, 45.0f);
+	cubeNode = new PlanetNode(cube, rockTexture, planetShaderShadows, Vector3(500, 300, 500), Vector3(0.3f, 0.5f, 0.3f) * heightMapSize, Vector3(0, 0, 0), false, 0.0f);
+	waterNode = new WaterNode(waterQuad, waterTexture, waterShader, terrainNode->GetModelScale());
+	skinnedNode = new SkinnedNode(skinnedMesh, anim, material, skinnedMeshShader, Vector3(-50, 150, 100));
+	root_1->AddChild(terrainNode);
+	terrainNode->AddChild(rockNode1);
+	terrainNode->AddChild(rockNode2);
+	terrainNode->AddChild(rockNode3);
+	terrainNode->AddChild(floatingCube);
+	terrainNode->AddChild(cubeNode);
+	cubeNode->AddChild(skinnedNode);
+	floatingCube->AddChild(orbitController);
+	orbitController->AddChild(cubeMoon);
+}
+
+void Renderer::SetUpSpaceScene() {
+	root_2 = new SceneNode();
+	mainPlanetNode = new PlanetNode(sphere, planetTexture1, planetShaderShadows, Vector3(800, 800, 800), Vector3(800, 0, 800), Vector3(0, 1, 0), true, 30.0f);
+	asteroid1 = new PlanetNode(rock_1, rockTexture, planetShaderShadows, Vector3(50, 50, 50), Vector3(1500, 0, 0), Vector3(1, 1, 1), true, 20.0f);
+	orbitController1 = new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 0), true, 40.0f);
+	asteroid2 = new PlanetNode(rock_2, rockTexture, planetShaderShadows, Vector3(15, 15, 15), Vector3(1550, 0, 0), Vector3(1, 0, 1), true, 20.0f);
+	orbitController2 = new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(1, 1, 1), true, -30.0f);
+	asteroid3 = new PlanetNode(rock_3, rockTexture, planetShaderShadows, Vector3(40, 40, 40), Vector3(2000, 0, 0), Vector3(1, 1, 0), true, 20.0f);
+	orbitController3 = new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 1), true, 60.0f);
+	moon_1 = new PlanetNode(sphere, planetTexture3, planetShaderShadows, Vector3(250, 250, 250), Vector3(3500, 0, 0), Vector3(1, 1, 0), true, 20.0f);
+	orbitControllerMoon1 = new PlanetNode(NULL, NULL, NULL, Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 0), true, 1.0f);
+	planet_2 = new PlanetNode(sphere, planetTexture2, planetShader, Vector3(1200, 1200, 1200), Vector3(-7800, 1600, 7000), Vector3(1, 1, 1), true, 5.0f);
+	planet_3 = new PlanetNode(sphere, redPlanetTexture, planetShader, Vector3(400, 400, 400), Vector3(-7000, 1100, -5400), Vector3(1, 1, 0), true, 60.0f);;
+	root_2->AddChild(mainPlanetNode);
+	mainPlanetNode->AddChild(orbitController1);
+	orbitController1->AddChild(asteroid1);
+	mainPlanetNode->AddChild(orbitController2);
+	orbitController2->AddChild(asteroid2);
+	mainPlanetNode->AddChild(orbitController3);
+	orbitController3->AddChild(asteroid3);
+	mainPlanetNode->AddChild(orbitControllerMoon1);
+	orbitControllerMoon1->AddChild(moon_1);
+	root_2->AddChild(planet_2);
+	root_2->AddChild(planet_3);
 }
 
 // methods for scene hierarchy
@@ -464,7 +495,7 @@ void Renderer::DrawSkinned(SceneNode* node) {
 	glUniformMatrix4fv(glGetUniformLocation(node->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
 }
 
-void Renderer::DrawWater(){
+void Renderer::DrawWater() {
 	BindShader(waterNode->GetShader());
 
 	glUniform3fv(glGetUniformLocation(waterNode->GetShader()->GetProgram(), "cameraPos"), 1, (float*)&activeCamera->GetPosition());
@@ -562,7 +593,7 @@ void Renderer::DrawPostProcess() {
 		quad->Draw();
 		// swap colour buffers for second blur
 		glUniform1i(glGetUniformLocation(processShader->GetProgram(), "isVertical"), 1);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[0],0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[0], 0);
 		glBindTexture(GL_TEXTURE_2D, bufferColourTex[1]);
 		quad->Draw();
 	}
@@ -597,7 +628,7 @@ void Renderer::ResetCameras() {
 	sceneView = 1;
 	cameraViews[0] = new Camera(0.0f, 45.0f, heightMapSize * Vector3(0.5f, 1.5f, 0.5f));
 	cameraViews[1] = new Camera(-12.0f, 130.0f, Vector3(3070.0f, 870.0f, 100.0f));
-	cameraViews[2] = new Camera(290.0f, -21.0f, Vector3(700.0f,1100.0f,3600.0f));
+	cameraViews[2] = new Camera(290.0f, -21.0f, Vector3(700.0f, 1100.0f, 3600.0f));
 	cameraViews[3] = new Camera(-3.0f, 80.0f, Vector3(4360.0f, 230.0f, 135.0f));
 	cameraViews[4] = new Camera(-17.0f, 330.0f, Vector3(-7470.0f, 4403.0f, 10258.0f));
 	cameraViews[5] = new Camera(-35.0f, 85, Vector3(6720.0f, 6860.0f, 725.0f));

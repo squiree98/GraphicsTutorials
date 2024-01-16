@@ -3,6 +3,9 @@
 #include "../nclgl/OGLRenderer.h"
 #include "../nclgl/SceneNode.h"
 
+#include "../nclgl/MeshMaterial.h"
+#include "../nclgl/MeshAnimation.h"
+
 class Camera;
 class Light;
 class Shader;
@@ -15,7 +18,7 @@ class SkinnedNode;
 class Renderer : public OGLRenderer
 {
 public:
-	Renderer(Window &parent);
+	Renderer(Window& parent);
 	~Renderer(void);
 
 	void	UpdateScene(float dt)	override;
@@ -27,6 +30,16 @@ public:
 private:
 	// cameras
 	void ResetCameras();
+
+	// methods for setting up scene
+	void SetUpMeshes();
+	void SetUpTextures();
+	void SetUpShaders();
+	void SetUpShadowMapping();
+	void SetUpPostProcessing();
+	void SetUpSceneHierarchies();
+	void SetUpGroundScene();
+	void SetUpSpaceScene();
 
 	// methods for scene hierarchy
 	void BuildNodeLists(SceneNode* from);
@@ -58,9 +71,20 @@ private:
 	Camera* activeCamera;
 	int cameraIndex;
 
+	// meshes
 	Mesh* quad;
 	Mesh* skyBoxQuad;
 	Mesh* waterQuad;
+	Mesh* sphere;
+	Mesh* cube;
+	Mesh* rock_1;
+	Mesh* rock_2;
+	Mesh* rock_3;
+
+	// skinned mesh variables
+	Mesh* skinnedMesh;
+	MeshAnimation* anim;
+	MeshMaterial* material;
 
 	// lighting
 	Light* light;
