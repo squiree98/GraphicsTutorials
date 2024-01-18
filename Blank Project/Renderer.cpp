@@ -123,8 +123,9 @@ void Renderer::UpdateScene(float dt) {
 	else {
 		activeCamera = cameraViews[cameraIndex];
 		float timePassed = activeCamera->AutoMoveCamera(dt);
-		if (timePassed >= 9.0f)
-			POSTPASSES = 10;
+		if (timePassed >= 9.0f) {
+			POSTPASSES = 10 * (timePassed - 9.0f);
+		}
 		if (timePassed >= 10.0f) {
 			cameraIndex++;
 			POSTPASSES = 0;
